@@ -8,7 +8,7 @@ import torch.nn as nn
 from torch.nn import functional as F
 from transformers import PreTrainedModel, PreTrainedTokenizer
 
-from plm_interpretability.utils import get_layer_activations
+from utils import get_layer_activations
 
 
 class SparseAutoencoder(nn.Module):
@@ -230,6 +230,21 @@ class SparseAutoencoder(nn.Module):
         pre_acts = x @ self.w_enc + self.b_enc
         latents = self.topK_activation(pre_acts, self.k)
         return latents
+    
+    @torch.no_grad()
+    def encode(self, x: torch.Tensor) -> torch.Tensor:
+        x, mu, std = self.LN(x)
+        x = x - self.b_pre
+        acts = x @ self.w_enc + self.b_enc
+        return acts, mu, std 
+    
+    @torch.no_grad()
+    def decode(self, acts: torch.Tensor, mu: torch.Tensor, std: torch.Tensor) -> torch.Tensor:
+        latents = self.topK_activation(acts, self.k)
+
+        recons = latents @ self.w_dec + self.b_pre
+        recons = recons * std + mu
+        return recons
 
 
 def loss_fn(
