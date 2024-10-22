@@ -112,7 +112,8 @@ def make_viz_files(checkpoint_files: list[str], sequences_file: str):
                 sae_dim_acts = sae_acts[:, dim]
                 # Use the max activation across the sequence for ranking
                 max_act = np.max(sae_dim_acts)
-                hidden_dim_to_seqs[dim].push((max_act, seq_idx, sae_dim_acts))
+                if max_act > 0:
+                    hidden_dim_to_seqs[dim].push((max_act, seq_idx, sae_dim_acts))
 
         dim_to_examples = {}
         for dim in range(sae_dim):
