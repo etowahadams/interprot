@@ -26,6 +26,7 @@ dist-ssr
 # Python
 __pycache__/
 *.egg-info/
+*.venv/
 
 # Directories with large files
 checkpoints/
