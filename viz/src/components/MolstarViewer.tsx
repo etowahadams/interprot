@@ -4,9 +4,11 @@ import { residueColor } from "../utils";
 interface MolstarViewerProps {
   alphafold_id: string;
   activation_list: Array<number>;
+  width?: string;
+  height?: string;
 }
 
-const MolstarViewer = ({ alphafold_id, activation_list }: MolstarViewerProps) => {
+const MolstarViewer = ({ alphafold_id, activation_list, width = '400px', height = '400px' }: MolstarViewerProps) => {
   useEffect(() => {
     const loadMolstarPlugin = () => {
       // Create plugin instance and set options after script loads
@@ -18,7 +20,7 @@ const MolstarViewer = ({ alphafold_id, activation_list }: MolstarViewerProps) =>
           url: `https://alphafold.ebi.ac.uk/files/AF-${alphafold_id}-F1-model_v4.cif`,
           format: "cif",
         },
-        alphafoldView: true,
+        alphafoldView: false,
         bgColor: { r: 255, g: 255, b: 255 },
         hideControls: true,
         hideCanvasControls: ["selection", "animation", "controlToggle", "controlInfo"],
@@ -66,8 +68,8 @@ const MolstarViewer = ({ alphafold_id, activation_list }: MolstarViewerProps) =>
     <div
       id={`viewer-${alphafold_id}`}
       style={{
-        width: "400px", // Width and height are required
-        height: "400px",
+        width, // Width and height are required
+        height,
         position: "relative",
       }}
     ></div>
