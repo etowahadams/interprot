@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { residueColor } from "../utils";
 
+import proteinEmoji from "../protein.png";
 interface MolstarViewerProps {
   alphafold_id: string;
   activation_list: Array<number>;
@@ -175,7 +176,9 @@ const MolstarViewer = ({
       onClick={handleClick}
     >
       {isLoading ? (
-        <div className="animate-pulse bg-gray-200 rounded-lg w-full h-full" />
+        <div className="flex flex-col items-center justify-center w-full h-full">
+          <img src={proteinEmoji} alt="Loading..." className="w-12 h-12 animate-wiggle mb-4" />
+        </div>
       ) : isInteractive ? (
         <>
           <div
