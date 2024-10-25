@@ -60,7 +60,7 @@ const MolstarViewer = ({
     }
   };
 
-  const initializeViewer = (container: HTMLElement, isOffscreen = false) => {
+  const initializeViewer = (container: HTMLElement) => {
     // @ts-expect-error
     const instance = new PDBeMolstarPlugin();
 
@@ -87,7 +87,7 @@ const MolstarViewer = ({
         // Initialize interactive viewer
         const container = document.getElementById(`viewer-${alphafold_id}`);
         if (container) {
-          const instance = initializeViewer(container, false);
+          const instance = initializeViewer(container);
           setViewerInstance(instance);
 
           instance.events.loadComplete.subscribe(() => {
