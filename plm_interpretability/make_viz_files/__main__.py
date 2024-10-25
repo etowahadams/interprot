@@ -34,27 +34,11 @@ class TopKHeap:
         return sorted(self.heap, reverse=True)
 
 
-class BottomKHeap:
-    def __init__(self, k: int):
-        self.k = k
-        self.heap: list[tuple[float, int, Any]] = []
-
-    def push(self, item: tuple[float, int, Any]):
-        if len(self.heap) < self.k:
-            heapq.heappush(self.heap, item)
-        elif item < self.heap[0]:
-            heapq.heapreplace(self.heap, item)
-
-    def get_items(self) -> list[tuple[float, int, Any]]:
-        return sorted(self.heap, reverse=False)
-
 @lru_cache(maxsize=100000)
 def get_esm_layer_acts(
     seq: str, tokenizer: AutoTokenizer, plm_model: EsmModel, plm_layer: int
 ) -> torch.Tensor:
-    return get_layer_activations(
-        tokenizer=tokenizer, plm=plm_model, seqs=[seq], layer=plm_layer
-    )[0]
+    return get_layer_activations(tokenizer=tokenizer, plm=plm_model, seqs=[seq], layer=plm_layer)[0]
 
 
 @click.command()
@@ -86,15 +70,11 @@ def make_viz_files(checkpoint_files: list[str], sequences_file: str):
         if matches:
             plm_dim, plm_layer, sae_dim = map(int, matches.groups())
         else:
-            raise ValueError(
-                "Checkpoint file must be named in the format plm<n>_l<n>_sae<n>"
-            )
+            raise ValueError("Checkpoint file must be named in the format plm<n>_l<n>_sae<n>")
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         tokenizer = AutoTokenizer.from_pretrained("facebook/esm2_t33_650M_UR50D")
-        plm_model = (
-            EsmModel.from_pretrained("facebook/esm2_t33_650M_UR50D").to(device).eval()
-        )
+        plm_model = EsmModel.from_pretrained("facebook/esm2_t33_650M_UR50D").to(device).eval()
         sae_model = SparseAutoencoder(plm_dim, sae_dim).to(device)
 
         try:
@@ -110,19 +90,11 @@ def make_viz_files(checkpoint_files: list[str], sequences_file: str):
             )
 
         # Build a heap for each hidden dimension to store the top NUM_SEQS_PER_DIM sequences
-        hidden_dim_to_seqs = {
-            dim: {
-                "top": TopKHeap(k=NUM_SEQS_PER_DIM),
-                "bottom": BottomKHeap(k=NUM_SEQS_PER_DIM),
-            }
-            for dim in range(sae_dim)
-        }
+        hidden_dim_to_seqs = {dim: TopKHeap(k=NUM_SEQS_PER_DIM) for dim in range(sae_dim)}
 
         df = pl.read_parquet(sequences_file)
         for seq_idx, row in tqdm(
-            enumerate(df.iter_rows(named=True)),
-            total=len(df),
-            desc="Processing sequences",
+            enumerate(df.iter_rows(named=True)), total=len(df), desc="Processing sequences"
         ):
             seq = row["Sequence"]
             esm_layer_acts = get_esm_layer_acts(seq, tokenizer, plm_model, plm_layer)
@@ -134,36 +106,25 @@ def make_viz_files(checkpoint_files: list[str], sequences_file: str):
                 # Use the max activation across the sequence for ranking
                 max_act = np.max(sae_dim_acts)
                 if max_act > 0:
-                    hidden_dim_to_seqs[dim]['top'].push((max_act, seq_idx, sae_dim_acts))
-                    hidden_dim_to_seqs[dim]['bottom'].push((max_act, seq_idx, sae_dim_acts))
+                    hidden_dim_to_seqs[dim].push((max_act, seq_idx, sae_dim_acts))
 
         dim_to_examples = {}
         for dim in range(sae_dim):
-            def get_examples(heap):
-                return [
-                    {
-                        "tokens_acts_list": [round(float(act), 1) for act in sae_dim_acts],
-                        "tokens_list": tokenizer(df[seq_idx]["Sequence"].item())[
-                            "input_ids"
-                        ][1:-1],
-                        "alphafold_id": df[seq_idx]["AlphaFoldDB"].item()[:-1],
-                    }
-                    for _, seq_idx, sae_dim_acts in heap.get_items()
-                ]
-            top_examples = get_examples(hidden_dim_to_seqs[dim]['top'])
-            bottom_examples = get_examples(hidden_dim_to_seqs[dim]['bottom'])
-            dim_to_examples[dim] = {
-                "top": top_examples,
-                "bottom": bottom_examples,
-            }
+            examples = [
+                {
+                    "tokens_acts_list": [round(float(act), 1) for act in sae_dim_acts],
+                    "tokens_list": tokenizer(df[seq_idx]["Sequence"].item())["input_ids"][1:-1],
+                    "alphafold_id": df[seq_idx]["AlphaFoldDB"].item()[:-1],
+                }
+                for _, seq_idx, sae_dim_acts in hidden_dim_to_seqs[dim].get_items()
+            ]
+            dim_to_examples[dim] = examples
 
         output_dir_name = os.path.basename(checkpoint_file).split(".")[0]
         os.makedirs(os.path.join(OUTPUT_ROOT_DIR, output_dir_name), exist_ok=True)
 
         for dim in range(sae_dim):
-            with open(
-                os.path.join(OUTPUT_ROOT_DIR, output_dir_name, f"{dim}.json"), "w"
-            ) as f:
+            with open(os.path.join(OUTPUT_ROOT_DIR, output_dir_name, f"{dim}.json"), "w") as f:
                 json.dump(dim_to_examples[dim], f)
 
 
