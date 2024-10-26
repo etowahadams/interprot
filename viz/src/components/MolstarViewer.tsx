@@ -1,238 +1,193 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { residueColor } from "../utils";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
 import proteinEmoji from "../protein.png";
-interface MolstarViewerProps {
+
+interface ProteinData {
   alphafold_id: string;
-  activation_list: Array<number>;
-  width?: string;
-  height?: string;
-  maxRetries?: number;
+  tokens_acts_list: Array<number>;
 }
 
-const MolstarViewer = ({
-  alphafold_id,
-  activation_list,
-  width = "400px",
-  height = "400px",
-  maxRetries = 3,
-}: MolstarViewerProps) => {
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isInteractive, setIsInteractive] = useState(false);
-  const [viewerInstance, setViewerInstance] = useState<any>(null);
+interface MolstarViewerProps {
+  proteins: ProteinData[];
+}
 
-  const captureView = async (instance: any, containerId: string, retryCount = 0) => {
-    try {
-      const container = document.getElementById(containerId);
-      const canvas = container?.querySelector("canvas");
+const MolstarViewer = ({ proteins }: MolstarViewerProps) => {
+  const [previewImages, setPreviewImages] = useState<string[]>([]);
+  const [activeViewers, setActiveViewers] = useState<Set<number>>(new Set());
+  const viewerInstancesRef = useRef<Map<number, any>>(new Map());
 
-      if (!canvas) {
-        if (retryCount < maxRetries) {
-          console.log(`Attempt ${retryCount + 1}: Canvas not found, retrying in 1 second...`);
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          return captureView(instance, containerId, retryCount + 1);
-        }
-        throw new Error("Canvas element not found after max retries");
-      }
+  const renderToImage = async (protein: ProteinData) => {
+    return new Promise<string>((resolve) => {
+      const offscreenContainer = document.createElement("div");
+      offscreenContainer.style.width = "400px";
+      offscreenContainer.style.height = "400px";
+      offscreenContainer.style.position = "absolute";
+      offscreenContainer.style.left = "-9999px";
+      document.body.appendChild(offscreenContainer);
 
-      const dataUrl = canvas.toDataURL("image/png");
+      // @ts-expect-error
+      const viewer = new PDBeMolstarPlugin();
+      const options = {
+        customData: {
+          url: `https://alphafold.ebi.ac.uk/files/AF-${protein.alphafold_id}-F1-model_v4.cif`,
+          format: "cif",
+        },
+        alphafoldView: true,
+        bgColor: { r: 255, g: 255, b: 255 },
+        hideControls: true,
+        hideCanvasControls: ["selection", "animation", "controlToggle", "controlInfo"],
+        landscape: true,
+      };
 
-      if (dataUrl === "data:," || dataUrl === "data:image/png;base64,") {
-        if (retryCount < maxRetries) {
-          console.log(`Attempt ${retryCount + 1}: Empty canvas, retrying in 1 second...`);
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-          return captureView(instance, containerId, retryCount + 1);
-        }
-        throw new Error("Failed to capture valid image data after max retries");
-      }
+      viewer.render(offscreenContainer, options);
+      viewer.events.loadComplete.subscribe(() => {
+        viewer.visual.select({
+          data: residueColor(protein.tokens_acts_list),
+          nonSelectedColor: "#ffffff",
+        });
 
-      setImageUrl(dataUrl);
-      setIsLoading(false);
-    } catch (error) {
-      if (retryCount < maxRetries) {
-        console.log(`Attempt ${retryCount + 1}: Failed to capture view, retrying in 1 second...`);
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        return captureView(instance, containerId, retryCount + 1);
-      }
-      console.error("Error capturing view after all retries:", error);
-      setIsLoading(false);
-    }
+        setTimeout(() => {
+          const canvas = offscreenContainer.querySelector("canvas");
+          if (canvas) {
+            const image = canvas.toDataURL("image/png");
+            const ctx = canvas.getContext("2d");
+            ctx?.reset();
+            document.body.removeChild(offscreenContainer);
+            resolve(image);
+          }
+        }, 150);
+      });
+    });
   };
 
-  const initializeViewer = (container: HTMLElement) => {
+  const renderSequentially = async (proteins: ProteinData[]) => {
+    const images: string[] = [];
+    for (const protein of proteins) {
+      const image = await renderToImage(protein);
+      images.push(image);
+      setPreviewImages([...images]); // Update state after each render
+    }
+    return images;
+  };
+
+  const loadMolstarPlugin = (protein: ProteinData, index: number) => {
+    if (viewerInstancesRef.current.has(index)) {
+      return;
+    }
+
     // @ts-expect-error
-    const instance = new PDBeMolstarPlugin();
+    const viewer = new PDBeMolstarPlugin();
+    viewerInstancesRef.current.set(index, viewer);
 
     const options = {
       customData: {
-        url: `https://alphafold.ebi.ac.uk/files/AF-${alphafold_id}-F1-model_v4.cif`,
+        url: `https://alphafold.ebi.ac.uk/files/AF-${protein.alphafold_id}-F1-model_v4.cif`,
         format: "cif",
       },
-      alphafoldView: false,
+      alphafoldView: true,
       bgColor: { r: 255, g: 255, b: 255 },
       hideControls: true,
       hideCanvasControls: ["selection", "animation", "controlToggle", "controlInfo"],
-      sequencePanel: false,
+      sequencePanel: true,
       landscape: true,
     };
 
-    instance.render(container, options);
-    return instance;
+    const viewerContainer = document.getElementById(`viewer-${index}`);
+    viewer.render(viewerContainer, options);
+
+    viewer.events.loadComplete.subscribe(() => {
+      viewer.visual.select({
+        data: residueColor(protein.tokens_acts_list),
+        nonSelectedColor: "#ffffff",
+      });
+    });
+  };
+
+  // Clean up function to destroy viewers and reset state
+  const cleanup = () => {
+    // Destroy all viewer instances
+    viewerInstancesRef.current.forEach((viewer) => {
+      if (viewer && typeof viewer.destroy === "function") {
+        viewer.destroy();
+      }
+    });
+    viewerInstancesRef.current.clear();
+    setActiveViewers(new Set());
+    setPreviewImages([]);
   };
 
   useEffect(() => {
-    const loadMolstarPlugin = () => {
-      if (isInteractive) {
-        // Initialize interactive viewer
-        const container = document.getElementById(`viewer-${alphafold_id}`);
-        if (container) {
-          const instance = initializeViewer(container);
-          setViewerInstance(instance);
-
-          instance.events.loadComplete.subscribe(() => {
-            instance.visual.select({
-              data: residueColor(activation_list),
-              nonSelectedColor: "#ffffff",
-            });
-          });
-        }
-      } else {
-        // Initialize off-screen viewer for image capture
-        const offscreenContainer = document.createElement("div");
-        const containerId = `molstar-container-${alphafold_id}`;
-        offscreenContainer.id = containerId;
-        offscreenContainer.style.position = "absolute";
-        offscreenContainer.style.left = "-9999px";
-        offscreenContainer.style.width = width;
-        offscreenContainer.style.height = height;
-        document.body.appendChild(offscreenContainer);
-
-        const instance = initializeViewer(offscreenContainer);
-
-        instance.events.loadComplete.subscribe(() => {
-          instance.visual.select({
-            data: residueColor(activation_list),
-            nonSelectedColor: "#ffffff",
-          });
-
-          setTimeout(async () => {
-            await captureView(instance, containerId);
-            if (document.getElementById(containerId)) {
-              document.body.removeChild(offscreenContainer);
-            }
-          }, 1000);
-        });
-      }
-    };
-
     const scriptId = "molstar-script";
     let script = document.getElementById(scriptId);
+
+    // Clean up previous state when proteins change
+    cleanup();
+
+    const initializeViewer = async () => {
+      await renderSequentially(proteins);
+    };
 
     if (!script) {
       script = document.createElement("script");
       script.id = scriptId;
       // @ts-expect-error
       script.src = "https://cdn.jsdelivr.net/npm/pdbe-molstar@3.3.0/build/pdbe-molstar-plugin.js";
-      script.onload = loadMolstarPlugin;
+      script.onload = initializeViewer;
       document.body.appendChild(script);
     } else {
-      loadMolstarPlugin();
+      initializeViewer();
     }
 
-    return () => {
-      if (viewerInstance) {
-        viewerInstance.clear();
-      }
-      const containerId = `molstar-container-${alphafold_id}`;
-      const container = document.getElementById(containerId);
-      if (container) {
-        document.body.removeChild(container);
-      }
-    };
-  }, [alphafold_id, activation_list, width, height, maxRetries, isInteractive]);
+    // Clean up on unmount
+    return cleanup;
+  }, [proteins]);
 
-  const handleClick = () => {
-    if (!isInteractive) {
-      setIsInteractive(true);
-    }
-  };
-
-  const handleClose = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsInteractive(false);
+  const handleImageClick = (index: number) => {
+    setActiveViewers((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(index)) {
+        // keep it
+      } else {
+        newSet.add(index);
+        setTimeout(() => loadMolstarPlugin(proteins[index], index), 0);
+      }
+      return newSet;
+    });
   };
 
   return (
-    <div
-      style={{
-        width,
-        height,
-        position: "relative",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-      onClick={handleClick}
-    >
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center w-full h-full">
-          <img src={proteinEmoji} alt="Loading..." className="w-12 h-12 animate-wiggle mb-4" />
-        </div>
-      ) : isInteractive ? (
-        <>
-          <div
-            id={`viewer-${alphafold_id}`}
-            style={{
-              width: "100%",
-              height: "100%",
-            }}
-          />
-          <button
-            onClick={handleClose}
-            className="absolute top-2 right-2 bg-white rounded-full p-1 shadow-md hover:bg-gray-100"
-            title="Return to static view"
-          >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
-        </>
-      ) : imageUrl ? (
-        <>
-          <TooltipProvider delayDuration={100}>
-            <Tooltip>
-              <TooltipTrigger>
+    <div className="container mx-auto p-4">
+      <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {proteins.map((protein, index) => (
+          <div key={protein.alphafold_id} className="relative aspect-square">
+            {activeViewers.has(index) ? (
+              <div
+                id={`viewer-${index}`}
+                className="w-full h-full"
+                onClick={() => handleImageClick(index)}
+              />
+            ) : previewImages[index] ? (
+              <img
+                src={previewImages[index]}
+                alt={`Protein ${protein.alphafold_id}`}
+                onClick={() => handleImageClick(index)}
+                className="w-full h-full object-cover cursor-pointer rounded-lg hover:opacity-80 transition-opacity"
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center w-full h-full">
                 <img
-                  src={imageUrl}
-                  alt={`Protein structure ${alphafold_id}`}
-                  style={{
-                    maxWidth: "100%",
-                    maxHeight: "100%",
-                    objectFit: "contain",
-                    cursor: "pointer",
-                  }}
-                  title="Click to interact"
+                  src={proteinEmoji}
+                  alt="Loading..."
+                  className="w-12 h-12 animate-wiggle mb-4"
                 />
-              </TooltipTrigger>
-              <TooltipContent>Click to interact with the structure</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </>
-      ) : (
-        <div className="text-red-500">Failed to load visualization after multiple attempts</div>
-      )}
+              </div>
+            )}
+            <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
+              {protein.alphafold_id}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

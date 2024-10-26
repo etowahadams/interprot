@@ -132,21 +132,8 @@ function SAEVisualizer() {
             ))}
           </div>
         </div>
-        <div className="container mx-auto p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-            {featureData.map((seq) => (
-              <div
-                className="bg-white rounded-lg flex items-center justify-center"
-                key={`molstar-${seq.alphafold_id}`}
-              >
-                <MolstarViewer
-                  alphafold_id={seq.alphafold_id}
-                  activation_list={seq.tokens_acts_list}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
+
+        <MolstarViewer proteins={featureData} />
       </main>
     </SidebarProvider>
   );
