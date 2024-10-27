@@ -169,7 +169,6 @@ def make_viz_files_quartile(checkpoint_files: list[str], sequences_file: str):
             )
 
         df = pl.read_parquet(sequences_file)
-        df = df.sample(8)
         
         # Process all sequences first to build the complete activation matrix
         all_sequences = []
@@ -189,6 +188,7 @@ def make_viz_files_quartile(checkpoint_files: list[str], sequences_file: str):
             all_sequences.append(sae_acts)
             sequence_ids.append(str(seq_idx))
             sequence_info.append({
+                "name": row["Protein Name"],
                 "tokens_list": tokenizer(seq)["input_ids"][1:-1],
                 "alphafold_id": row["AlphaFoldDB"][:-1],
                 "sequence": seq
@@ -196,7 +196,7 @@ def make_viz_files_quartile(checkpoint_files: list[str], sequences_file: str):
 
         # Analyze each dimension
         dim_to_examples = {}
-        for dim in range(sae_dim):
+        for dim in tqdm(range(sae_dim), desc="Analyzing dimensions"):
             # Get quartile analysis for this dimension
             results = analyze_sequences_by_column(
                 sequences=all_sequences,
@@ -222,6 +222,7 @@ def make_viz_files_quartile(checkpoint_files: list[str], sequences_file: str):
                         "tokens_acts_list": [round(float(act), 1) for act in seq_acts],
                         "tokens_list": sequence_info[seq_idx]["tokens_list"],
                         "alphafold_id": sequence_info[seq_idx]["alphafold_id"],
+                        "name": sequence_info[seq_idx]["name"],
                     }
                     current_quartile['examples'].append(example)
                 examples.append(current_quartile)
@@ -231,7 +232,7 @@ def make_viz_files_quartile(checkpoint_files: list[str], sequences_file: str):
         output_dir_name = os.path.basename(checkpoint_file).split(".")[0]
         os.makedirs(os.path.join(OUTPUT_ROOT_DIR, output_dir_name), exist_ok=True)
 
-        for dim in range(sae_dim):
+        for dim in tqdm(range(sae_dim), desc="Saving results"):
             quartiles = dim_to_examples[dim]
             has_examples = any([len(quartile['examples']) > 0 for quartile in quartiles])
             if not has_examples:
