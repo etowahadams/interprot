@@ -241,7 +241,8 @@ def make_viz_files_quartile(checkpoint_files: list[str], sequences_file: str):
             with open(
                 os.path.join(OUTPUT_ROOT_DIR, output_dir_name, f"{dim}.json"), "w"
             ) as f:
-                f.write(custom_json_dumps(quartiles, indent=2))
+                json.dump(quartiles, f)
+                # f.write(custom_json_dumps(quartiles, indent=2))
 
 
 def custom_json_dumps(data, indent=None):
