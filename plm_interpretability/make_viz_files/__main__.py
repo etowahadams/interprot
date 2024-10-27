@@ -188,7 +188,7 @@ def make_viz_files_quartile(checkpoint_files: list[str], sequences_file: str):
             all_sequences.append(sae_acts)
             sequence_ids.append(str(seq_idx))
             sequence_info.append({
-                "name": row["Protein Name"],
+                "name": row["Protein names"],
                 "tokens_list": tokenizer(seq)["input_ids"][1:-1],
                 "alphafold_id": row["AlphaFoldDB"][:-1],
                 "sequence": seq
