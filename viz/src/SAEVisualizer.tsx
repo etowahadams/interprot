@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import MolstarViewer from "./components/MolstarViewer";
 import SeqViewer, { SingleSeq } from "./components/SeqViewer";
-import CustomViewer from "./components/CustomViewer";
+import CustomSeqPlayground from "./components/CustomSeqPlayground";
 import { SAE_CONFIGS } from "./SAEConfigs";
 import {
   Select,
@@ -124,7 +124,7 @@ function SAEVisualizer() {
           <h1 className="text-3xl font-bold">Feature {feature}</h1>
         </div>
         {dimToCuratedMap.has(feature) && <p>{dimToCuratedMap.get(feature)?.desc}</p>}
-        {config?.supportsCustomSequence && <CustomViewer feature={feature} />}
+        {config?.supportsCustomSequence && <CustomSeqPlayground feature={feature} />}
         <div className="p-4 mt-5 border-2 border-gray-200 border-dashed rounded-lg">
           <div className="overflow-x-auto">
             {featureData.map((seq) => (
