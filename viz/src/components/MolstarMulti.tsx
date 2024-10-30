@@ -27,6 +27,7 @@ const MolstarMulti: React.FC<MolstarViewerProps> = ({ proteins }) => {
   const viewerContainerRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const createResidueColorTheme = (activationList: number[], name = "residue-colors") => {
+    const maxValue = Math.max(...activationList);
     return CustomElementProperty.create({
       label: "Residue Colors",
       name,
@@ -40,7 +41,7 @@ const MolstarMulti: React.FC<MolstarViewerProps> = ({ proteins }) => {
       },
       coloring: {
         getColor(e) {
-          const color = redColorMapRGB(activationList[e], 1);
+          const color = redColorMapRGB(activationList[e], maxValue);
           return activationList[e] !== undefined
             ? Color.fromRgb(color[0], color[1], color[2])
             : Color.fromRgb(255, 255, 255);
