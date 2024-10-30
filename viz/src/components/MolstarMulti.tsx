@@ -4,6 +4,7 @@ import { PluginContext } from "molstar/lib/mol-plugin/context";
 import { CustomElementProperty } from "molstar/lib/mol-model-props/common/custom-element-property";
 import { Model, ElementIndex } from "molstar/lib/mol-model/structure";
 import { Color } from "molstar/lib/mol-util/color";
+import proteinEmoji from "../protein.png";
 import { redColorMapRGB } from "@/utils";
 
 interface ProteinData {
@@ -15,10 +16,10 @@ interface MolstarViewerProps {
   proteins: ProteinData[];
 }
 
-const PROTEIN_SIZE = 300; // Size of each protein viewer in pixels
+const PROTEIN_SIZE = 300;
 
 const MolstarMulti: React.FC<MolstarViewerProps> = ({ proteins }) => {
-  const [proteinImages, setProteinImages] = useState<string[]>([]);
+  const [proteinImages, setProteinImages] = useState<(string | null)[]>(Array(proteins.length).fill(null));
   const pluginRef = useRef<PluginContext | null>(null);
   const offscreenContainerRef = useRef<HTMLDivElement>(null);
 
@@ -63,7 +64,7 @@ const MolstarMulti: React.FC<MolstarViewerProps> = ({ proteins }) => {
     return plugin;
   };
 
-  const loadStructure = async (plugin: PluginContext, protein: ProteinData) => {
+  const loadStructure = async (plugin: PluginContext, protein: ProteinData, index: number) => {
     try {
       const fileName = `https://alphafold.ebi.ac.uk/files/AF-${protein.alphafold_id}-F1-model_v4.cif`;
 
@@ -79,7 +80,6 @@ const MolstarMulti: React.FC<MolstarViewerProps> = ({ proteins }) => {
       });
 
       const trajectory = await plugin.builders.structure.parseTrajectory(structureData, "mmcif");
-
       const preset = await plugin.builders.structure.hierarchy.applyPreset(trajectory, "default");
 
       plugin.dataTransaction(async () => {
@@ -90,54 +90,45 @@ const MolstarMulti: React.FC<MolstarViewerProps> = ({ proteins }) => {
         }
       });
 
-      // Wait for the scene to render
       await new Promise((resolve) => setTimeout(resolve, 100));
-
-      // Capture the canvas image
 
       const canvas = offscreenContainerRef.current?.querySelector("canvas");
       if (!canvas) throw new Error("Canvas not found");
       const imageUrl = canvas.toDataURL("image/png");
-      return imageUrl;
+      
+      setProteinImages(prev => {
+        const newImages = [...prev];
+        newImages[index] = imageUrl;
+        return newImages;
+      });
+
     } catch (error) {
       console.error("Error loading structure:", error);
       throw error;
     }
   };
 
-  const renderProteins = async (proteins: ProteinData[]) => {
+  const renderProteins = async () => {
     if (!offscreenContainerRef.current) return;
 
-    setProteinImages([]);
     if (!pluginRef.current) {
-      console.warn("init viewer");
       pluginRef.current = await initViewer(offscreenContainerRef.current);
     }
-    const images: string[] = [];
 
     try {
-      for (const protein of proteins) {
-        const imageUrl = await loadStructure(pluginRef.current, protein);
-        images.push(imageUrl);
-
-        // Clean up previous structure
+      for (let i = 0; i < proteins.length; i++) {
+        await loadStructure(pluginRef.current, proteins[i], i);
         await pluginRef.current.clear();
       }
-
-      setProteinImages(images);
-
-      // Clean up the plugin after all proteins are processed
-      // if (pluginRef.current) {
-      //   pluginRef.current.dispose();
-      //   pluginRef.current = null;
-      // }
     } catch (error) {
       console.error("Error rendering proteins:", error);
     }
   };
 
   useEffect(() => {
-    renderProteins(proteins);
+    setProteinImages(Array(proteins.length).fill(null));
+    renderProteins();
+
     // return () => {
     //   if (pluginRef.current) {
     //     pluginRef.current.dispose();
@@ -148,28 +139,37 @@ const MolstarMulti: React.FC<MolstarViewerProps> = ({ proteins }) => {
 
   return (
     <div className="container mx-auto p-4">
-      {/* Hidden container for rendering */}
       <div
         ref={offscreenContainerRef}
-        // className="hidden"
         style={{ width: PROTEIN_SIZE, height: PROTEIN_SIZE, position: "absolute", top: -9999 }}
       />
 
-      {/* Grid display of protein images */}
       <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {proteinImages.map((imageUrl, index) => (
+        {proteins.map((protein, index) => (
           <div
-            key={proteins[index].alphafold_id}
+            key={protein.alphafold_id}
             className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden"
           >
-            <img
-              src={imageUrl}
-              alt={`Protein ${proteins[index].alphafold_id}`}
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 text-sm">
-              {proteins[index].alphafold_id}
-            </div>
+            {proteinImages[index] ? (
+              <>
+                <img
+                  src={proteinImages[index]!}
+                  alt={`Protein ${protein.alphafold_id}`}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 text-sm">
+                  {protein.alphafold_id}
+                </div>
+              </>
+            ) : (
+                <div className="flex flex-col items-center justify-center w-full h-full bg-white">
+                <img
+                  src={proteinEmoji}
+                  alt="Loading..."
+                  className="w-12 h-12 animate-wiggle mb-4"
+                />
+              </div>
+            )}
           </div>
         ))}
       </div>
