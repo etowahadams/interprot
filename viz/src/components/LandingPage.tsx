@@ -26,7 +26,6 @@ const LandingPage: React.FC = () => {
       </header>
 
       <main className="flex-grow flex flex-col items-center justify-center px-4 text-center">
-        <MolstarSimple cifData="https://alphafold.ebi.ac.uk/files/AF-A0PK11-F1-model_v4.cif" colors={[0, 0, 0, 0, 1, 1, 1, 1]} />
         <h1 className="text-3xl sm:text-4xl font-bold mb-4">
           Interpreting Proteins through Language Models
         </h1>
