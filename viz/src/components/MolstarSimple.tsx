@@ -1,65 +1,98 @@
-import React, { useEffect, useRef } from 'react';
-import { DefaultPluginSpec } from 'molstar/lib/mol-plugin/spec';
-import { PluginContext } from 'molstar/lib/mol-plugin/context';
+import React, { useEffect, useRef } from "react";
+import { DefaultPluginSpec } from "molstar/lib/mol-plugin/spec";
+import { PluginContext } from "molstar/lib/mol-plugin/context";
+import { CustomElementProperty } from "molstar/lib/mol-model-props/common/custom-element-property";
+import { Model, ElementIndex } from "molstar/lib/mol-model/structure";
+import { Color } from "molstar/lib/mol-util/color";
 
 interface MolstarViewerProps {
-  cifData: File | string; // Accepts either a File object or a URL string
+  cifData: File | string;
+  colors: number[]; // Array of values between 0 and 1 for coloring residues
   width?: string;
   height?: string;
   className?: string;
 }
 
-const MolstarSimple: React.FC<MolstarViewerProps> = ({ 
-  cifData, 
-  width = '800px', 
-  height = '600px',
-  className = ''
+const MolstarSimple: React.FC<MolstarViewerProps> = ({
+  cifData,
+  colors,
+  width = "800px",
+  height = "600px",
+  className = "",
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const pluginRef = useRef<PluginContext | null>(null);
 
+  // Custom color theme
+  const ResidueColorTheme = CustomElementProperty.create({
+    label: "Residue Colors",
+    name: "residue-colors",
+    getData(model: Model) {
+      const map = new Map<ElementIndex, number>();
+      const residueIndex = model.atomicHierarchy.residueAtomSegments.index;
+      for (let i = 0, _i = model.atomicHierarchy.atoms._rowCount; i < _i; i++) {
+        map.set(i as ElementIndex, residueIndex[i]);
+      }
+      return { value: map };
+    },
+    coloring: {
+      getColor(e) {
+        console.warn(e);
+        return colors[e] !== undefined ? Color(colors[e] * 0xff0000) : Color(0x777777); // Default color if out of bounds
+      },
+      defaultColor: Color(0x777777),
+    },
+    getLabel(e) {
+      return e === 0 ? "Odd stripe" : "Even stripe";
+    },
+  });
+
   const initViewer = async (element: HTMLDivElement) => {
-    const canvas = document.createElement('canvas');
+    const canvas = document.createElement("canvas");
     element.appendChild(canvas);
 
     const spec = DefaultPluginSpec();
     const plugin = new PluginContext(spec);
     await plugin.init();
     plugin.initViewer(canvas, element);
+
+    plugin.representation.structure.themes.colorThemeRegistry.add(
+      ResidueColorTheme.colorThemeProvider!
+    );
     return plugin;
   };
 
   const loadStructure = async (plugin: PluginContext, data: File | string) => {
     try {
       let structureData;
-      
-      if (typeof data === 'string') {
-        // If data is a URL
-        structureData = await plugin.builders.data.download({ 
+
+      if (typeof data === "string") {
+        structureData = await plugin.builders.data.download({
           url: data,
-          isBinary: data.endsWith('.bcif') // Check if it's a binary CIF file
+          isBinary: data.endsWith(".bcif"),
         });
       } else {
-        // If data is a File object
         const arrayBuffer = await data.arrayBuffer();
-        structureData = await plugin.builders.data.rawData({ 
+        structureData = await plugin.builders.data.rawData({
           data: arrayBuffer,
         });
       }
 
-      const trajectory = await plugin.builders.structure.parseTrajectory(
-        structureData,
-        'mmcif'
-      );
-      
-      const preset = await plugin.builders.structure.hierarchy.applyPreset(
-        trajectory,
-        'default'
-      );
+      const trajectory = await plugin.builders.structure.parseTrajectory(structureData, "mmcif");
+
+      const preset = await plugin.builders.structure.hierarchy.applyPreset(trajectory, "default");
+
+      plugin.dataTransaction(async () => {
+        for (const s of plugin.managers.structure.hierarchy.current.structures) {
+          await plugin.managers.structure.component.updateRepresentationsTheme(s.components, {
+            color: ResidueColorTheme.propertyProvider.descriptor.name as any,
+          });
+        }
+      });
 
       return preset;
     } catch (error) {
-      console.error('Error loading structure:', error);
+      console.error("Error loading structure:", error);
       throw error;
     }
   };
@@ -69,40 +102,27 @@ const MolstarSimple: React.FC<MolstarViewerProps> = ({
       if (!containerRef.current) return;
 
       try {
-        // Initialize viewer if it doesn't exist
         if (!pluginRef.current) {
           pluginRef.current = await initViewer(containerRef.current);
         }
 
-        // Load the structure
         await loadStructure(pluginRef.current, cifData);
       } catch (error) {
-        console.error('Error setting up viewer:', error);
+        console.error("Error setting up viewer:", error);
       }
     };
 
     setupViewer();
 
-    // Cleanup function
     return () => {
       if (pluginRef.current) {
         pluginRef.current.dispose();
         pluginRef.current = null;
       }
     };
-  }, [cifData]); // Re-run when cifData changes
+  }, [cifData, colors]);
 
-  return (
-    <div 
-      ref={containerRef}
-      style={{ 
-        width, 
-        height,
-        position: 'relative' 
-      }}
-      className={className}
-    />
-  );
+  return <div ref={containerRef} className={className} style={{ width, height }} />;
 };
 
 export default MolstarSimple;
