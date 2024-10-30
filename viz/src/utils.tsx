@@ -17,6 +17,22 @@ export function redColorMap(value: number, maxValue: number) {
   return `rgb(${red}, ${green}, ${blue})`;
 }
 
+export function redColorMapRGB(value: number, maxValue: number) {
+  // Ensure value is between 0 and maxValue
+  value = Math.max(0, Math.min(value, maxValue));
+
+  // Normalize value between 0 and 1
+  const normalized = value / maxValue;
+
+  // Interpolate between white (255, 255, 255) and red (255, 0, 0)
+  const red = 255;
+  const green = Math.round(255 * (1 - normalized));
+  const blue = Math.round(255 * (1 - normalized));
+
+  // Return the interpolated color as a hex string
+  return [red, green, blue];
+}
+
 // PDBeMolstarPlugin doesn't allow color in rgb format
 export function rgbToHex(rgb: string): string {
   const [r, g, b] = rgb.match(/\d+/g)!.map(Number);

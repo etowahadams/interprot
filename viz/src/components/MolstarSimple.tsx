@@ -4,6 +4,7 @@ import { PluginContext } from "molstar/lib/mol-plugin/context";
 import { CustomElementProperty } from "molstar/lib/mol-model-props/common/custom-element-property";
 import { Model, ElementIndex } from "molstar/lib/mol-model/structure";
 import { Color } from "molstar/lib/mol-util/color";
+import { redColorMapRGB } from "@/utils";
 
 interface MolstarViewerProps {
   cifData: File | string;
@@ -22,7 +23,6 @@ const MolstarSimple: React.FC<MolstarViewerProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const pluginRef = useRef<PluginContext | null>(null);
-
   // Custom color theme
   const ResidueColorTheme = CustomElementProperty.create({
     label: "Residue Colors",
@@ -37,8 +37,8 @@ const MolstarSimple: React.FC<MolstarViewerProps> = ({
     },
     coloring: {
       getColor(e) {
-        console.warn(e);
-        return colors[e] !== undefined ? Color(colors[e] * 0xff0000) : Color(0x777777); // Default color if out of bounds
+        const color = redColorMapRGB(colors[e], 1);
+        return colors[e] !== undefined ? Color.fromRgb(color[0], color[1], color[2]) : Color.fromRgb(255, 255, 255); // Default color if out of bounds
       },
       defaultColor: Color(0x777777),
     },
