@@ -19,15 +19,13 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { useNavigate } from "react-router-dom";
-
+import HomeNavigator from "@/components/HomeNavigator";
 import "./App.css";
 import { Toggle } from "./components/ui/toggle";
 
 const NUM_SEQS_TO_DISPLAY = 9;
 
 function SAEVisualizer() {
-  const navigate = useNavigate();
   const [selectedModel, setSelectedModel] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return params.get("model") || "SAE4096-L24";
@@ -65,8 +63,8 @@ function SAEVisualizer() {
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
-          <div style={{ cursor: "pointer", padding: 10 }} onClick={() => navigate("/")}>
-            <h2 className="text-xl font-semibold">InterProt</h2>
+          <div className="m-4">
+            <HomeNavigator />
           </div>
           <Select value={selectedModel} onValueChange={(value) => setSelectedModel(value)}>
             <SelectTrigger>

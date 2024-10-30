@@ -144,16 +144,17 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
   return (
     <div>
       <div style={{ marginTop: 20 }}>
-        <div className="flex overflow-x-auto">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Input
             type="text"
-            style={{ marginRight: 10 }}
+            className="w-full"
             value={customSeq}
             onChange={(e) => setCustomSeq(e.target.value)}
             placeholder="Enter your own protein sequence"
           />
           <Button
             onClick={handleSubmit}
+            className="w-full sm:w-auto"
             disabled={playgroundState === PlaygroundState.LOADING_SAE_ACTIVATIONS || !customSeq}
           >
             {playgroundState === PlaygroundState.LOADING_SAE_ACTIVATIONS ? "Loading..." : "Submit"}
@@ -187,17 +188,18 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
         playgroundState !== PlaygroundState.LOADING_SAE_ACTIVATIONS && (
           <div style={{ marginTop: 20 }}>
             <h3 className="text-xl font-bold mb-4">Steering</h3>
-
-            <div className="flex items-center space-x-4">
-              <span className="mr-2 whitespace-nowrap">Steer multiplier: {steerMultiplier}</span>
-              <Slider
-                defaultValue={[1]}
-                min={-10}
-                max={10}
-                step={0.1}
-                value={[steerMultiplier]}
-                onValueChange={(value) => setSteerMultiplier(value[0])}
-              />
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <span className="whitespace-nowrap">Steer multiplier: {steerMultiplier}</span>
+              <div className="flex-grow">
+                <Slider
+                  defaultValue={[1]}
+                  min={-5}
+                  max={5}
+                  step={0.1}
+                  value={[steerMultiplier]}
+                  onValueChange={(value) => setSteerMultiplier(value[0])}
+                />
+              </div>
               <Button
                 onClick={handleSteer}
                 disabled={playgroundState === PlaygroundState.LOADING_STEERED_SEQUENCE}
@@ -208,22 +210,24 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
               </Button>
             </div>
 
-            <div className="overflow-x-auto" style={{ margin: 20 }}>
-              <SeqViewer
-                seq={{
-                  tokens_acts_list: steeredActivations,
-                  tokens_list: sequenceToTokens(steeredSeq),
-                }}
-              />
-            </div>
             {steeredActivations.length > 0 && (
-              <CustomStructureViewer
-                viewerId="steered-viewer"
-                seq={steeredSeq}
-                activations={steeredActivations}
-                onLoad={onStructureLoad}
-                requireActivations={false}
-              />
+              <>
+                <div className="overflow-x-auto" style={{ margin: 20 }}>
+                  <SeqViewer
+                    seq={{
+                      tokens_acts_list: steeredActivations,
+                      tokens_list: sequenceToTokens(steeredSeq),
+                    }}
+                  />
+                </div>
+                <CustomStructureViewer
+                  viewerId="steered-viewer"
+                  seq={steeredSeq}
+                  activations={steeredActivations}
+                  onLoad={onStructureLoad}
+                  requireActivations={false}
+                />
+              </>
             )}
           </div>
         )}

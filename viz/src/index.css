@@ -146,15 +146,18 @@
   body {
     @apply bg-background text-foreground;
   }
+  #root {
+    padding: 28px;
+  }
 }
-
 
 .animate-wiggle {
   animation: wiggle 0.6s ease-in-out infinite;
 }
 
 @keyframes wiggle {
-  0%, 100% {
+  0%,
+  100% {
     transform: rotate(-5deg);
   }
   50% {
