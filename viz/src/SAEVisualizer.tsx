@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import MolstarViewer from "./components/MolstarViewer";
+// import MolstarViewer from "./components/MolstarViewer";
+import MolstarMulti from './components/MolstarMulti';
 import SeqViewer, { SingleSeq } from "./components/SeqViewer";
 import CustomSeqPlayground from "./components/CustomSeqPlayground";
 import { SAE_CONFIGS } from "./SAEConfigs";
@@ -133,7 +134,7 @@ function SAEVisualizer() {
           </div>
         </div>
 
-        <MolstarViewer proteins={featureData} />
+        <MolstarMulti proteins={featureData} />
       </main>
     </SidebarProvider>
   );
