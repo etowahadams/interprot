@@ -1,8 +1,10 @@
 import "./App.css";
-import { createHashRouter, RouterProvider } from "react-router-dom";
+import { createHashRouter, RouterProvider, Navigate } from "react-router-dom";
 import LandingPage from "./components/LandingPage";
-import SAEVisualizer from "./SAEVisualizer";
+import SAEVisualizerPage from "./SAEVisualizerPage";
 import ErrorBoundary from "./components/ErrorBoundary";
+import CustomSequenceSearchPage from "./components/CustomSequenceSearchPage";
+import { SAEProvider } from "./SAEContext";
 
 const router = createHashRouter([
   {
@@ -10,8 +12,24 @@ const router = createHashRouter([
     element: <LandingPage />,
   },
   {
-    path: "/sae-viz/:model?/:feature?",
-    element: <SAEVisualizer />,
+    path: "/sae-viz",
+    element: <Navigate to="/sae-viz/SAE4096-L24/2293" replace />,
+  },
+  {
+    path: "/sae-viz/:model/",
+    element: (
+      <SAEProvider>
+        <CustomSequenceSearchPage />
+      </SAEProvider>
+    ),
+  },
+  {
+    path: "/sae-viz/:model/:feature",
+    element: (
+      <SAEProvider>
+        <SAEVisualizerPage />
+      </SAEProvider>
+    ),
   },
 ]);
 

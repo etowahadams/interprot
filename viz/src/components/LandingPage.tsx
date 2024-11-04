@@ -30,7 +30,7 @@ const LandingPage: React.FC = () => {
                   <X />
                 </button>
                 <Link
-                  to="/sae-viz"
+                  to="/sae-viz/SAE4096-L24/2293"
                   className="text-2xl text-gray-600 hover:text-gray-900"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
@@ -109,7 +109,7 @@ const LandingPage: React.FC = () => {
           soon!
         </p>
         <Link
-          to="/sae-viz"
+          to="/sae-viz/SAE4096-L24/2293"
           className="bg-black text-white px-6 py-3 rounded-full text-lg inline-block order-2 sm:order-none mb-8 w-full sm:w-auto text-center"
         >
           SAE Visualizer
