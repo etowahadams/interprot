@@ -6,7 +6,6 @@ import CustomSeqPlayground from "./components/CustomSeqPlayground";
 import { Navigate } from "react-router-dom";
 
 import { SAEContext } from "./SAEContext";
-import SAESidebar from "./components/SAESidebar";
 import { NUM_SEQS_TO_DISPLAY } from "./config";
 
 const SAEVisualizerPage: React.FC = () => {
@@ -29,7 +28,6 @@ const SAEVisualizerPage: React.FC = () => {
 
   return (
     <>
-      <SAESidebar />
       <main className="text-left max-w-full overflow-x-auto">
         <h1 className="text-3xl font-semibold md:mt-0 mt-16">Feature {selectedFeature}</h1>
         {dimToCuratedMap.has(selectedFeature) && (

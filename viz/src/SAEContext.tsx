@@ -3,6 +3,7 @@ import { SAE_CONFIGS, SAEConfig } from "./SAEConfigs";
 import { DEFAULT_SAE_MODEL } from "./config";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { useNavigate } from "react-router-dom";
+import SAESidebar from "./components/SAESidebar";
 
 interface SAEContextType {
   selectedModel: string;
@@ -62,7 +63,10 @@ export const SAEProvider = ({ children }: { children: React.ReactNode }) => {
         SAEConfig: SAE_CONFIGS[selectedModel],
       }}
     >
-      <SidebarProvider>{children}</SidebarProvider>
+      <SidebarProvider>
+        <SAESidebar />
+        {children}
+      </SidebarProvider>
     </SAEContext.Provider>
   );
 };
