@@ -20,7 +20,7 @@ export default function SeqInput({
   buttonText: string;
 }) {
   return (
-    <div className="flex flex-col gap-4 px-1">
+    <div className="flex flex-col gap-4 p-0.5">
       <Textarea
         placeholder="Enter protein sequence..."
         value={sequence}

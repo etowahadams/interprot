@@ -13,7 +13,8 @@ export default function SAEFeatureCard({
   sequence: string;
   sae_acts: Array<number>;
 }) {
-  const { selectedModel } = useContext(SAEContext);
+  const { selectedModel, SAEConfig } = useContext(SAEContext);
+  const desc = SAEConfig.curated?.find((f) => f.dim === dim)?.desc;
   return (
     <Card
       key={dim}
@@ -24,6 +25,7 @@ export default function SAEFeatureCard({
     >
       <CardHeader>
         <CardTitle className="text-left">Feature {dim}</CardTitle>
+        {desc && <CardDescription>{desc}</CardDescription>}
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">

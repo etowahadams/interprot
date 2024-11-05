@@ -19,7 +19,7 @@ import {
 import { getSAEAllDimsActivations } from "@/runpod.ts";
 import SeqInput from "./SeqInput";
 
-export default function CustomSequenceSearchPage() {
+export default function CustomSeqSearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [sequence, setSequence] = useState(searchParams.get("seq") || "");
   const submittedSequence = useRef(searchParams.get("seq") || "");

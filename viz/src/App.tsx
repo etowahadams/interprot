@@ -3,7 +3,7 @@ import { createHashRouter, RouterProvider, Navigate } from "react-router-dom";
 import LandingPage from "./components/LandingPage";
 import SAEVisualizerPage from "./SAEVisualizerPage";
 import ErrorBoundary from "./components/ErrorBoundary";
-import CustomSequenceSearchPage from "./components/CustomSequenceSearchPage";
+import CustomSeqSearchPage from "./components/CustomSeqSearchPage";
 import { SAEProvider } from "./SAEContext";
 
 const router = createHashRouter([
@@ -19,7 +19,7 @@ const router = createHashRouter([
     path: "/sae-viz/:model/",
     element: (
       <SAEProvider>
-        <CustomSequenceSearchPage />
+        <CustomSeqSearchPage />
       </SAEProvider>
     ),
   },
