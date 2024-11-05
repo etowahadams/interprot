@@ -45,10 +45,9 @@ export default function SAESidebar() {
 
   return (
     <>
-      {/* HACK to make the divider extend the entire width of the screen */}
       <div
         className="fixed top-0 w-full bg-background border-b border-border z-50 py-4 px-8 md:hidden"
-        style={{ marginLeft: -28, width: "calc(100% + 56px)" }}
+        style={{ marginLeft: -28, width: "100%" }}
       >
         <div className="flex items-center justify-between">
           <SidebarTrigger />

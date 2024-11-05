@@ -65,8 +65,8 @@ export default function CustomSequenceSearchPage() {
         hasSearched ? "" : "flex items-center justify-center"
       }`}
     >
-      <div className={`${hasSearched ? "w-full px-4" : "w-full max-w-xl"}`}>
-        <h1 className={`text-4xl font text-center ${hasSearched ? "mb-4" : "mb-8"}`}>
+      <div className={`${hasSearched ? "w-full px-4" : "w-full max-w-xl"} mt-16 sm:mt-0`}>
+        <h1 className={`text-4xl font text-left sm:text-center mb-4`}>
           Search sequence against SAE features
         </h1>
         <div className={`${hasSearched ? "w-full mx-auto" : ""} flex flex-col gap-4`}>
