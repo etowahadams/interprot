@@ -105,7 +105,7 @@ export default function SAESidebar() {
             }}
           >
             <Search className="w-4 h-4 mr-2 shrink-0" />
-            <span>Search sequence against SAE features</span>
+            <span>Search SAE features by sequence</span>
           </Button>
           <Separator />
         </SidebarHeader>

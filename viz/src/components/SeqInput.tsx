@@ -12,12 +12,14 @@ export default function SeqInput({
   onSubmit,
   loading,
   buttonText,
+  exampleSeqs,
 }: {
   sequence: string;
   setSequence: (sequence: string) => void;
   onSubmit: (sequence: string) => void;
   loading: boolean;
   buttonText: string;
+  exampleSeqs?: { [key: string]: string };
 }) {
   return (
     <div className="flex flex-col gap-4 p-0.5">
@@ -41,6 +43,15 @@ export default function SeqInput({
         <p className="text-sm text-red-500">
           Please enter a valid protein sequence consisting of only standard amino acids
         </p>
+      )}
+      {exampleSeqs && (
+        <div className="flex flex-row gap-8 justify-center">
+          {Object.entries(exampleSeqs).map(([name, seq]) => (
+            <Button variant="outline" key={name} onClick={() => onSubmit(seq)}>
+              {name}
+            </Button>
+          ))}
+        </div>
       )}
       <Button
         onClick={() => onSubmit(sequence)}

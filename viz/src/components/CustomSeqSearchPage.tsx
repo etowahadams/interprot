@@ -18,16 +18,18 @@ import {
 } from "@/components/ui/select";
 import { getSAEAllDimsActivations } from "@/runpod.ts";
 import SeqInput from "./SeqInput";
+import { EXAMPLE_SEQS_FOR_SEARCH } from "./ui/ExampleSeqsForSearch";
 
 export default function CustomSeqSearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [sequence, setSequence] = useState(searchParams.get("seq") || "");
-  const submittedSequence = useRef(searchParams.get("seq") || "");
   const [searchResults, setSearchResults] = useState<Array<{ dim: number; sae_acts: number[] }>>(
     []
   );
-  const hasSearched = searchResults.length > 0;
   const [isLoading, setIsLoading] = useState(false);
+  const submittedSequence = useRef(searchParams.get("seq") || "");
+  const hasSubmittedSequence = submittedSequence.current !== "";
+
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState("max");
   const resultsPerPage = 10;
@@ -72,24 +74,27 @@ export default function CustomSeqSearchPage() {
   return (
     <main
       className={`min-h-screen w-full overflow-x-hidden ${
-        hasSearched ? "" : "flex items-center justify-center"
+        hasSubmittedSequence ? "" : "flex items-center justify-center"
       }`}
     >
-      <div className={`${hasSearched ? "w-full px-4" : "w-full max-w-2xl"} mt-16 sm:mt-0`}>
-        <h1 className={`text-4xl font text-left sm:text-center ${hasSearched ? "mb-4" : "mb-8"}`}>
-          Search sequence against SAE features
+      <div className={`${hasSubmittedSequence ? "w-full px-4" : "w-full max-w-2xl"} mt-16 sm:mt-0`}>
+        <h1
+          className={`text-4xl text-left sm:text-center ${hasSubmittedSequence ? "mb-6" : "mb-8"}`}
+        >
+          Search SAE features by sequence
         </h1>
-        <div className={`${hasSearched ? "w-full" : ""} flex flex-col gap-4`}>
+        <div className={`${hasSubmittedSequence ? "w-full" : ""} flex flex-col gap-4`}>
           <SeqInput
             sequence={sequence}
             setSequence={setSequence}
             onSubmit={handleSearch}
             loading={isLoading}
             buttonText="Search"
+            exampleSeqs={EXAMPLE_SEQS_FOR_SEARCH}
           />
         </div>
 
-        {hasSearched && (
+        {searchResults.length > 0 && (
           <div className="flex flex-col gap-2 mt-8 text-left">
             <div className="flex justify-between items-center px-2">
               <label className="text-sm">
