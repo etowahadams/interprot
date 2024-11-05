@@ -24,6 +24,7 @@ const CustomStructureViewer = ({
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [warning, setWarning] = useState("");
   const isMobile = useIsMobile();
 
   const ESMFoldCache = useRef<Record<string, string>>({});
@@ -169,8 +170,8 @@ const CustomStructureViewer = ({
       return;
     }
     if (seq.length > 400) {
-      setError(
-        "No structure generated. We are folding with ESMFold API which has a limit of 400 residues. Please try a shorter sequence."
+      setWarning(
+        "No structure generated. We are folding with the ESMFold API which has a limit of 400 residues. If you'd like to see a structure for your sequence, try a shorter sequence."
       );
       onLoad?.();
       return;
@@ -203,11 +204,12 @@ const CustomStructureViewer = ({
           id={viewerId}
           style={{
             width: "100%",
-            height: isMobile ? 300 : 400,
+            height: warning || error ? 0 : isMobile ? 300 : 400,
           }}
         />
       )}
       {message && <small>{message}</small>}
+      {warning && <small className="text-yellow-500">{warning}</small>}
       {error && <small className="text-red-500">{error}</small>}
     </div>
   );
