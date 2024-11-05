@@ -4,7 +4,7 @@ import { PluginContext } from "molstar/lib/mol-plugin/context";
 import { CustomElementProperty } from "molstar/lib/mol-model-props/common/custom-element-property";
 import { Model, ElementIndex } from "molstar/lib/mol-model/structure";
 import { Color } from "molstar/lib/mol-util/color";
-import { redColorMapRGB } from "../utils";
+import { redColorMapRGB } from "@/utils.ts";
 import proteinEmoji from "../protein.png";
 import { useIsMobile } from "@/hooks/use-mobile";
 

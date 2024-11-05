@@ -5,7 +5,7 @@ import { CustomElementProperty } from "molstar/lib/mol-model-props/common/custom
 import { Model, ElementIndex } from "molstar/lib/mol-model/structure";
 import { Color } from "molstar/lib/mol-util/color";
 import proteinEmoji from "../protein.png";
-import { redColorMapRGB } from "@/utils";
+import { redColorMapRGB } from "@/utils.ts";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ProteinData {

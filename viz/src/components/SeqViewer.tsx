@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from "react";
-import { redColorMapHex, tokenToResidue } from "../utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { tokensToSequence } from "../utils";
+import { redColorMapHex, tokenToResidue, tokensToSequence } from "@/utils.ts";
 import { Copy, Check } from "lucide-react";
 
 export interface SeqFormat {

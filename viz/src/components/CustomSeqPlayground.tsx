@@ -2,9 +2,10 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import SeqViewer from "./SeqViewer";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { sequenceToTokens } from "../utils";
+import { sequenceToTokens } from "@/utils.ts";
 import CustomStructureViewer from "./CustomStructureViewer";
 import { Textarea } from "@/components/ui/textarea";
+import { getSAEDimActivations, getSteeredSequence } from "@/runpod.ts";
 
 interface CustomSeqPlaygroundProps {
   feature: number;
@@ -48,71 +49,6 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
     setSteeredActivations(initialState.steeredActivations);
   }, [feature]);
 
-  const fetchSAEActivations = async (seq: string) => {
-    try {
-      const response = await fetch("https://api.runpod.ai/v2/yk9ehzl3h653vj/runsync", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_RUNPOD_API_KEY}`,
-        },
-        body: JSON.stringify({
-          input: {
-            sequence: seq,
-            dim: feature,
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
-
-      const resp = await response.json();
-      const data = resp.output.data;
-      if (data.tokens_acts_list) {
-        return data.tokens_acts_list;
-      } else {
-        console.error("Unexpected data format:", data);
-      }
-    } catch (error) {
-      console.error("Error fetching activation data:", error);
-    }
-  };
-
-  const getSteeredSequence = async () => {
-    try {
-      const response = await fetch("https://api.runpod.ai/v2/jw4etc8vzvp99p/runsync", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_RUNPOD_API_KEY}`,
-        },
-        body: JSON.stringify({
-          input: {
-            sequence: submittedSeqRef.current,
-            dim: feature,
-            multiplier: steerMultiplier,
-          },
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Network response was not ok");
-      }
-
-      const resp = await response.json();
-      const data = resp.output.data;
-      if (data.steered_sequence) {
-        return data.steered_sequence;
-      } else {
-        console.error("Unexpected data format:", data);
-      }
-    } catch (error) {
-      console.error("Error fetching steered sequence:", error);
-    }
-  };
-
   const handleSubmit = async () => {
     setViewerState(PlaygroundState.LOADING_SAE_ACTIVATIONS);
 
@@ -123,7 +59,10 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
     setSteeredActivations(initialState.steeredActivations);
 
     submittedSeqRef.current = customSeq.toUpperCase();
-    const saeActivations = await fetchSAEActivations(submittedSeqRef.current);
+    const saeActivations = await getSAEDimActivations({
+      sequence: submittedSeqRef.current,
+      dim: feature,
+    });
     setCustomSeqActivations(saeActivations);
   };
 
@@ -134,9 +73,13 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
     setSteeredActivations(initialState.steeredActivations);
     setSteeredSeq(initialState.steeredSeq);
 
-    const steeredSeq = await getSteeredSequence();
+    const steeredSeq = await getSteeredSequence({
+      sequence: submittedSeqRef.current,
+      dim: feature,
+      multiplier: steerMultiplier,
+    });
     setSteeredSeq(steeredSeq);
-    setSteeredActivations(await fetchSAEActivations(steeredSeq));
+    setSteeredActivations(await getSAEDimActivations({ sequence: steeredSeq, dim: feature }));
   };
 
   const onStructureLoad = useCallback(() => setViewerState(PlaygroundState.IDLE), []);

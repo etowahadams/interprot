@@ -2,7 +2,7 @@ import { useContext } from "react";
 import { Card, CardContent, CardTitle, CardHeader, CardDescription } from "@/components/ui/card";
 import { SAEContext } from "../SAEContext";
 import SeqViewer from "./SeqViewer";
-import { sequenceToTokens } from "../utils";
+import { sequenceToTokens } from "../utils.ts";
 
 export default function SAEFeatureCard({
   dim,

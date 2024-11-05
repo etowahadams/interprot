@@ -11,6 +11,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { getSAEAllDimsActivations } from "@/runpod.ts";
 
 export default function CustomSequenceSearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -39,36 +40,9 @@ export default function CustomSequenceSearchPage() {
       setIsLoading(true);
       submittedSequence.current = sequence;
       setSearchParams({ seq: sequence });
-      try {
-        const response = await fetch("https://api.runpod.ai/v2/yk9ehzl3h653vj/runsync", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_RUNPOD_API_KEY}`,
-          },
-          body: JSON.stringify({
-            input: {
-              sequence: sequence,
-            },
-          }),
-        });
 
-        if (!response.ok) {
-          throw new Error("Network response was not ok");
-        }
-
-        const resp = await response.json();
-        const data = resp.output.data;
-        if (data.token_acts_list_by_active_dim) {
-          setSearchResults(data.token_acts_list_by_active_dim);
-        } else {
-          console.error("Unexpected data format:", data);
-        }
-      } catch (error) {
-        console.error("Error fetching activation data:", error);
-      } finally {
-        setIsLoading(false);
-      }
+      setSearchResults(await getSAEAllDimsActivations({ sequence }));
+      setIsLoading(false);
     },
     [setSearchParams]
   );

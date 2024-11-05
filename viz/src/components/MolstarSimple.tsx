@@ -4,7 +4,7 @@ import { PluginContext } from "molstar/lib/mol-plugin/context";
 import { CustomElementProperty } from "molstar/lib/mol-model-props/common/custom-element-property";
 import { Model, ElementIndex } from "molstar/lib/mol-model/structure";
 import { Color } from "molstar/lib/mol-util/color";
-import { redColorMapRGB } from "@/utils";
+import { redColorMapRGB } from "@/utils.ts";
 
 interface MolstarViewerProps {
   cifData: File | string;
@@ -38,7 +38,9 @@ const MolstarSimple: React.FC<MolstarViewerProps> = ({
     coloring: {
       getColor(e) {
         const color = redColorMapRGB(colors[e], 1);
-        return colors[e] !== undefined ? Color.fromRgb(color[0], color[1], color[2]) : Color.fromRgb(255, 255, 255); // Default color if out of bounds
+        return colors[e] !== undefined
+          ? Color.fromRgb(color[0], color[1], color[2])
+          : Color.fromRgb(255, 255, 255); // Default color if out of bounds
       },
       defaultColor: Color(0x777777),
     },
