@@ -24,7 +24,6 @@ export default function SAEFeatureCard({
     >
       <CardHeader>
         <CardTitle className="text-left">Feature {dim}</CardTitle>
-        <CardDescription className="text-left">Card Description</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
