@@ -382,6 +382,7 @@ def load_models(sae_checkpoint: str):
 
 
 def handler(event):
+    logger.info(f"starting handler with event: {event}")
     try:
         input_data = event["input"]
         seq = input_data["sequence"]
@@ -405,10 +406,12 @@ def handler(event):
 
             data["token_acts_list_by_active_dim"] = [
                 {
-                    "dim": dim,
-                    "sae_acts": [round(float(act), 1) for act in sae_acts_by_active_dim[:, dim]],
+                    "dim": int(active_dims[dim_idx].item()),
+                    "sae_acts": [
+                        round(float(act), 1) for act in sae_acts_by_active_dim[:, dim_idx]
+                    ],
                 }
-                for dim in range(sae_acts_by_active_dim.shape[1])
+                for dim_idx in range(sae_acts_by_active_dim.shape[1])
             ]
 
         return {

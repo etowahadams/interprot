@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import SeqViewer from "./SeqViewer";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { sequenceToTokens } from "../utils";
 import CustomStructureViewer from "./CustomStructureViewer";
