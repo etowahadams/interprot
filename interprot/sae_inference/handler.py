@@ -385,20 +385,35 @@ def handler(event):
     try:
         input_data = event["input"]
         seq = input_data["sequence"]
-        dim = input_data["dim"]
+        dim = input_data.get("dim")
         _, esm_layer_acts = esm2_model.get_layer_activations(seq, 24)
         esm_layer_acts = esm_layer_acts[0].float()
         logger.info(f"esm_layer_acts: {esm_layer_acts.shape}")
 
         sae_acts = sae_model.get_acts(esm_layer_acts)[1:-1]
         logger.info(f"sae_acts: {sae_acts.shape}")
-        sae_dim_acts = sae_acts[:, dim].cpu().numpy()
+
+        data = {}
+        if dim is not None:
+            sae_dim_acts = sae_acts[:, dim].cpu().numpy()
+            data["tokens_acts_list"] = [round(float(act), 1) for act in sae_dim_acts]
+        else:
+            max_acts, _ = torch.max(sae_acts, dim=0)
+            sorted_dims = torch.argsort(max_acts, descending=True)
+            active_dims = sorted_dims[max_acts[sorted_dims] > 0]
+            sae_acts_by_active_dim = sae_acts[:, active_dims].cpu().numpy()
+
+            data["token_acts_list_by_active_dim"] = [
+                {
+                    "dim": dim,
+                    "sae_acts": [round(float(act), 1) for act in sae_acts_by_active_dim[:, dim]],
+                }
+                for dim in range(sae_acts_by_active_dim.shape[1])
+            ]
 
         return {
             "status": "success",
-            "data": {
-                "tokens_acts_list": [round(float(act), 1) for act in sae_dim_acts],
-            },
+            "data": data,
         }
     except Exception as e:
         logger.error(f"Traceback: {traceback.format_exc()}")

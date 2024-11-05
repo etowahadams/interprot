@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { sequenceToTokens } from "../utils";
 import CustomStructureViewer from "./CustomStructureViewer";
+import { Textarea } from "@/components/ui/textarea";
 
 interface CustomSeqPlaygroundProps {
   feature: number;
@@ -144,13 +145,23 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
   return (
     <div>
       <div style={{ marginTop: 20 }}>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Input
-            type="text"
-            className="w-full"
+        <div className="flex flex-col gap-2 p-1">
+          <Textarea
+            placeholder="Enter your own protein sequence..."
             value={customSeq}
             onChange={(e) => setCustomSeq(e.target.value)}
-            placeholder="Enter your own protein sequence"
+            className="w-full min-h-[120px] font-mono"
+            onKeyDown={(e) => {
+              if (
+                e.key === "Enter" &&
+                !e.shiftKey &&
+                customSeq &&
+                playgroundState !== PlaygroundState.LOADING_SAE_ACTIVATIONS
+              ) {
+                e.preventDefault();
+                handleSubmit();
+              }
+            }}
           />
           <Button
             onClick={handleSubmit}

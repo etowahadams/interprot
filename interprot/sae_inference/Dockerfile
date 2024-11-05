@@ -15,6 +15,7 @@ RUN wget https://dl.fbaipublicfiles.com/fair-esm/models/esm2_t33_650M_UR50D.pt
 RUN gdown https://drive.google.com/uc?id=1LtDUfcWQEwPuTdd127HEb_A2jQdRyKrU
 WORKDIR /
 
+RUN echo 'hi'
 COPY handler.py .
 
 EXPOSE 8000
