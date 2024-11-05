@@ -4,6 +4,8 @@ import { useIsMobile } from "../hooks/use-mobile";
 import HomeNavigator from "./HomeNavigator";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
+import { DEFAULT_SAE_MODEL } from "@/config";
+import { SAE_CONFIGS } from "@/SAEConfigs";
 
 const LandingPage: React.FC = () => {
   const isMobile = useIsMobile();
@@ -30,7 +32,7 @@ const LandingPage: React.FC = () => {
                   <X />
                 </button>
                 <Link
-                  to="/sae-viz/SAE4096-L24/2293"
+                  to={`/sae-viz/${DEFAULT_SAE_MODEL}/${SAE_CONFIGS[DEFAULT_SAE_MODEL].defaultDim}`}
                   className="text-2xl text-gray-600 hover:text-gray-900"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
@@ -109,7 +111,7 @@ const LandingPage: React.FC = () => {
           soon!
         </p>
         <Link
-          to="/sae-viz/SAE4096-L24/2293"
+          to={`/sae-viz/${DEFAULT_SAE_MODEL}/${SAE_CONFIGS[DEFAULT_SAE_MODEL].defaultDim}`}
           className="bg-black text-white px-6 py-3 rounded-full text-lg inline-block order-2 sm:order-none mb-8 w-full sm:w-auto text-center"
         >
           SAE Visualizer
