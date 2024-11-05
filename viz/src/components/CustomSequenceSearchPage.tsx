@@ -40,7 +40,7 @@ export default function CustomSequenceSearchPage() {
       submittedSequence.current = sequence;
       setSearchParams({ seq: sequence });
       try {
-        const response = await fetch("https://api.runpod.ai/v2/t2hebhowpmyyzw/runsync", {
+        const response = await fetch("https://api.runpod.ai/v2/yk9ehzl3h653vj/runsync", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

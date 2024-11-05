@@ -101,11 +101,12 @@ export default function SAESidebar() {
             className="mb-3 mx-3 whitespace-normal text-left h-auto py-2"
             onClick={() => {
               navigate(`/sae-viz/${selectedModel}`);
+              setSelectedFeature(undefined);
               setOpenMobile(false);
             }}
           >
             <Search className="w-4 h-4 mr-2 shrink-0" />
-            <span>Search sequence against all features</span>
+            <span>Search sequence against SAE features</span>
           </Button>
           <Separator />
         </SidebarHeader>

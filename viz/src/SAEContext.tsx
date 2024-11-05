@@ -9,7 +9,7 @@ interface SAEContextType {
   selectedModel: string;
   setSelectedModel: (model: string) => void;
   selectedFeature: number | undefined;
-  setSelectedFeature: (feature: number) => void;
+  setSelectedFeature: (feature: number | undefined) => void;
   SAEConfig: SAEConfig;
 }
 
@@ -56,9 +56,11 @@ export const SAEProvider = ({ children }: { children: React.ReactNode }) => {
           }
         },
         selectedFeature: selectedFeature,
-        setSelectedFeature: (feature: number) => {
+        setSelectedFeature: (feature: number | undefined) => {
           setSelectedFeature(feature);
-          navigate(`/sae-viz/${selectedModel}/${feature}`);
+          if (feature !== undefined) {
+            navigate(`/sae-viz/${selectedModel}/${feature}`);
+          }
         },
         SAEConfig: SAE_CONFIGS[selectedModel],
       }}
