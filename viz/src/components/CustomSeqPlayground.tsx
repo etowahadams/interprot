@@ -58,7 +58,7 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
     setSteerMultiplier(initialState.steerMultiplier);
     setSteeredActivations(initialState.steeredActivations);
 
-    submittedSeqRef.current = customSeq.toUpperCase();
+    submittedSeqRef.current = customSeq;
     const saeActivations = await getSAEDimActivations({
       sequence: submittedSeqRef.current,
       dim: feature,
@@ -92,6 +92,7 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
           setSequence={setCustomSeq}
           onSubmit={handleSubmit}
           loading={playgroundState === PlaygroundState.LOADING_SAE_ACTIVATIONS}
+          buttonText="Submit"
         />
       </div>
 
