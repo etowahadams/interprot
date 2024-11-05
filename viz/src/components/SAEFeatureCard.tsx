@@ -20,7 +20,7 @@ export default function SAEFeatureCard({
       key={dim}
       className="cursor-pointer"
       onClick={() => {
-        window.open(`#/sae-viz/${selectedModel}/${dim}`, "_blank");
+        window.open(`#/sae-viz/${selectedModel}/${dim}?seq=${sequence}`, "_blank");
       }}
     >
       <CardHeader>

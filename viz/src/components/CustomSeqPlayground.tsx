@@ -6,6 +6,7 @@ import { sequenceToTokens } from "@/utils.ts";
 import CustomStructureViewer from "./CustomStructureViewer";
 import { getSAEDimActivations, getSteeredSequence } from "@/runpod.ts";
 import SeqInput from "./SeqInput";
+import { useSearchParams } from "react-router-dom";
 
 interface CustomSeqPlaygroundProps {
   feature: number;
@@ -38,18 +39,19 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
     initialState.steeredActivations
   );
   const submittedSeqRef = useRef<string>("");
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Reset all state when feature changes
   useEffect(() => {
     setCustomSeqActivations(initialState.customSeqActivations);
-    setCustomSeq(initialState.customSeq);
+    setCustomSeq(searchParams.get("seq") || initialState.customSeq);
     setViewerState(initialState.playgroundState);
     setSteeredSeq(initialState.steeredSeq);
     setSteerMultiplier(initialState.steerMultiplier);
     setSteeredActivations(initialState.steeredActivations);
-  }, [feature]);
+  }, [feature, searchParams]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     setViewerState(PlaygroundState.LOADING_SAE_ACTIVATIONS);
 
     // Reset some states related to downstream actions
@@ -59,12 +61,21 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
     setSteeredActivations(initialState.steeredActivations);
 
     submittedSeqRef.current = customSeq;
+    setSearchParams({ seq: submittedSeqRef.current });
     const saeActivations = await getSAEDimActivations({
       sequence: submittedSeqRef.current,
       dim: feature,
     });
     setCustomSeqActivations(saeActivations);
-  };
+  }, [customSeq, setSearchParams, feature]);
+
+  // Automatically submit when seq URL param is present
+  useEffect(() => {
+    const urlSeq = searchParams.get("seq");
+    if (urlSeq && customSeq === urlSeq && customSeqActivations.length === 0) {
+      handleSubmit();
+    }
+  }, [searchParams, customSeq, customSeqActivations.length, handleSubmit]);
 
   const handleSteer = async () => {
     setViewerState(PlaygroundState.LOADING_STEERED_SEQUENCE);
