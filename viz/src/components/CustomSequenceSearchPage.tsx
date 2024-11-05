@@ -1,6 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
 import SAEFeatureCard from "./SAEFeatureCard";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -12,6 +10,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { getSAEAllDimsActivations } from "@/runpod.ts";
+import SeqInput from "./SeqInput";
 
 export default function CustomSequenceSearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -71,23 +70,13 @@ export default function CustomSequenceSearchPage() {
           Search sequence against SAE features
         </h1>
         <div className={`${hasSearched ? "w-full mx-auto" : ""} flex flex-col gap-4`}>
-          <Textarea
-            placeholder="Enter protein sequence..."
-            value={sequence}
-            onChange={(e) => setSequence(e.target.value)}
-            className={`w-full font-mono ${hasSearched ? "min-h-[80px]" : "min-h-[120px]"}`}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSearch(sequence);
-              }
-            }}
+          <SeqInput
+            sequence={sequence}
+            setSequence={setSequence}
+            onSubmit={handleSearch}
+            loading={isLoading}
+            buttonText="Search"
           />
-          <div className="flex justify-center">
-            <Button className="w-full" onClick={() => handleSearch(sequence)} disabled={isLoading}>
-              {isLoading ? "Searching..." : "Search"}
-            </Button>
-          </div>
         </div>
 
         {hasSearched && currentResults.length > 0 && (

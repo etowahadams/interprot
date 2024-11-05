@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { sequenceToTokens } from "@/utils.ts";
 import CustomStructureViewer from "./CustomStructureViewer";
-import { Textarea } from "@/components/ui/textarea";
 import { getSAEDimActivations, getSteeredSequence } from "@/runpod.ts";
+import SeqInput from "./SeqInput";
 
 interface CustomSeqPlaygroundProps {
   feature: number;
@@ -87,32 +87,12 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
   return (
     <div>
       <div style={{ marginTop: 20 }}>
-        <div className="flex flex-col gap-2 p-1">
-          <Textarea
-            placeholder="Enter your own protein sequence..."
-            value={customSeq}
-            onChange={(e) => setCustomSeq(e.target.value)}
-            className="w-full min-h-[120px] font-mono"
-            onKeyDown={(e) => {
-              if (
-                e.key === "Enter" &&
-                !e.shiftKey &&
-                customSeq &&
-                playgroundState !== PlaygroundState.LOADING_SAE_ACTIVATIONS
-              ) {
-                e.preventDefault();
-                handleSubmit();
-              }
-            }}
-          />
-          <Button
-            onClick={handleSubmit}
-            className="w-full sm:w-auto"
-            disabled={playgroundState === PlaygroundState.LOADING_SAE_ACTIVATIONS || !customSeq}
-          >
-            {playgroundState === PlaygroundState.LOADING_SAE_ACTIVATIONS ? "Loading..." : "Submit"}
-          </Button>
-        </div>
+        <SeqInput
+          sequence={customSeq}
+          setSequence={setCustomSeq}
+          onSubmit={handleSubmit}
+          loading={playgroundState === PlaygroundState.LOADING_SAE_ACTIVATIONS}
+        />
       </div>
 
       {/* Once we have SAE activations, display sequence and structure */}
