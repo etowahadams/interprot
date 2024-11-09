@@ -68,4 +68,24 @@ export function sequenceToTokens(sequence: string): Array<number> {
   return sequence.split("").map((residue) => residueToToken(residue));
 }
 
-export const ESMFoldCache: Record<string, string> = {};
+// Cache for sequence -> structure data in PDB format
+export const StructureCache: Record<string, string> = {};
+
+export const isProteinSequence = (sequence: string): boolean => {
+  const validAminoAcids = /^[ACDEFGHIKLMNPQRSTVWYBUXZ]+$/i;
+  return validAminoAcids.test(sequence.trim());
+};
+
+export const isPDBID = (input: string): boolean => {
+  const pdbPattern = /^[0-9A-Z]{4}$/i;
+  return pdbPattern.test(input.trim());
+};
+
+export const getPDBSequence = async (pdbId: string): Promise<string> => {
+  const pdbResponse = await fetch(`https://www.rcsb.org/fasta/entry/${pdbId}/display`);
+  const fastaText = await pdbResponse.text();
+  const sequences = fastaText.split(">").filter(Boolean);
+  if (sequences.length === 0) return "";
+  const sequenceLines = sequences[0].split("\n");
+  return sequenceLines.slice(1).join("").trim();
+};

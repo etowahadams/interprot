@@ -2,11 +2,12 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import SeqViewer from "./SeqViewer";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { sequenceToTokens } from "@/utils.ts";
+import { isPDBID, getPDBSequence, sequenceToTokens } from "@/utils.ts";
 import CustomStructureViewer from "./CustomStructureViewer";
 import { getSAEDimActivations, getSteeredSequence } from "@/runpod.ts";
 import SeqInput from "./SeqInput";
 import { useSearchParams } from "react-router-dom";
+import FullSeqViewer from "./FullSeqViewer";
 
 interface CustomSeqPlaygroundProps {
   feature: number;
@@ -39,6 +40,7 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
     initialState.steeredActivations
   );
   const submittedSeqRef = useRef<string>("");
+  const pdbIdRef = useRef<string | undefined>(undefined);
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Reset all state when feature changes
@@ -62,6 +64,12 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
 
     submittedSeqRef.current = customSeq;
     setSearchParams({ seq: submittedSeqRef.current });
+
+    if (isPDBID(submittedSeqRef.current)) {
+      pdbIdRef.current = submittedSeqRef.current;
+      submittedSeqRef.current = await getPDBSequence(submittedSeqRef.current);
+    }
+
     const saeActivations = await getSAEDimActivations({
       sequence: submittedSeqRef.current,
       dim: feature,
@@ -111,12 +119,7 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
       {customSeqActivations.length > 0 && (
         <>
           <div className="overflow-x-auto my-4">
-            <SeqViewer
-              seq={{
-                tokens_acts_list: customSeqActivations,
-                tokens_list: sequenceToTokens(submittedSeqRef.current),
-              }}
-            />
+            <FullSeqViewer sequence={submittedSeqRef.current} activations={customSeqActivations} />
           </div>
           {customSeqActivations.every((act) => act === 0) && (
             <p className="text-sm mb-2">
@@ -127,6 +130,7 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
           <CustomStructureViewer
             viewerId="custom-viewer"
             seq={submittedSeqRef.current}
+            pdbId={pdbIdRef.current}
             activations={customSeqActivations}
             onLoad={onStructureLoad}
           />

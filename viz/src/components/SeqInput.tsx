@@ -1,10 +1,11 @@
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { isProteinSequence, isPDBID } from "@/utils";
 
-const isValidProteinSequence = (sequence: string): boolean => {
-  const validAminoAcids = /^[ACDEFGHIKLMNPQRSTVWY]+$/i;
-  return validAminoAcids.test(sequence.trim());
-};
+// TODO(liam): We should come up with a better way to handle the input
+// that can either be a sequence or a PDB ID, maybe with some union type.
+// Currently both are stored as strings and some differential logic in
+// display components queue off of `isPDBID` checks.
 
 export default function SeqInput({
   sequence,
@@ -21,27 +22,31 @@ export default function SeqInput({
   buttonText: string;
   exampleSeqs?: { [key: string]: string };
 }) {
+  const isValidInput = (input: string): boolean => {
+    return isProteinSequence(input) || isPDBID(input);
+  };
+
   return (
     <div className="flex flex-col gap-4 p-0.5">
       <Textarea
-        placeholder="Enter protein sequence..."
+        placeholder="Enter protein sequence or PDB ID..."
         value={sequence}
         onChange={(e) => setSequence(e.target.value.toUpperCase())}
         className={`w-full font-mono min-h-[100px] text-sm sm:text-sm md:text-sm lg:text-sm text-base ${
-          sequence && !isValidProteinSequence(sequence) ? "border-red-500" : ""
+          sequence && !isValidInput(sequence) ? "border-red-500" : ""
         }`}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey && !loading) {
             e.preventDefault();
-            if (isValidProteinSequence(sequence)) {
+            if (isValidInput(sequence)) {
               onSubmit(sequence);
             }
           }
         }}
       />
-      {sequence && !isValidProteinSequence(sequence) && (
+      {sequence && !isValidInput(sequence) && (
         <p className="text-sm text-red-500">
-          Please enter a valid protein sequence consisting of only standard amino acids
+          Please enter either a valid protein sequence or a PDB ID
         </p>
       )}
       {exampleSeqs && (
@@ -56,7 +61,7 @@ export default function SeqInput({
       <Button
         onClick={() => onSubmit(sequence)}
         className="w-full sm:w-auto"
-        disabled={loading || !sequence || !isValidProteinSequence(sequence)}
+        disabled={loading || !sequence || !isValidInput(sequence)}
       >
         {loading ? "Loading..." : buttonText}
       </Button>

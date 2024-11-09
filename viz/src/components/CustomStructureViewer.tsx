@@ -7,11 +7,12 @@ import { Color } from "molstar/lib/mol-util/color";
 import { redColorMapRGB } from "@/utils.ts";
 import proteinEmoji from "../protein.png";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ESMFoldCache } from "@/utils";
+import { StructureCache } from "@/utils";
 
 interface CustomStructureViewerProps {
   viewerId: string;
   seq: string;
+  pdbId?: string;
   activations: number[];
   onLoad?: () => void;
 }
@@ -19,13 +20,14 @@ interface CustomStructureViewerProps {
 const CustomStructureViewer = ({
   viewerId,
   seq,
+  pdbId,
   activations,
   onLoad,
 }: CustomStructureViewerProps) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [warning, setWarning] = useState("");
+  const [foldedWithESM, setFoldedWithESM] = useState(false);
   const isMobile = useIsMobile();
 
   const pluginRef = useRef<PluginContext | null>(null);
@@ -60,7 +62,17 @@ const CustomStructureViewer = ({
   };
 
   useEffect(() => {
-    const foldStructure = async (sequence: string) => {
+    const getStructure = async (sequence: string) => {
+      if (pdbId) {
+        const url = `https://files.rcsb.org/download/${pdbId.toLowerCase()}.pdb`;
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch PDB structure: ${response.status}`);
+        }
+        const pdbData = await response.text();
+        return pdbData;
+      }
+
       const response = await fetch("https://api.esmatlas.com/foldSequence/v1/pdb/", {
         method: "POST",
         headers: {
@@ -72,7 +84,7 @@ const CustomStructureViewer = ({
       if (!response.ok) {
         throw new Error(`Network response was not ok: ${response.status}`);
       }
-
+      setFoldedWithESM(true);
       const pdbData = await response.text();
       return pdbData;
     };
@@ -145,8 +157,6 @@ const CustomStructureViewer = ({
             });
           }
         });
-
-        setMessage("Structure generated with ESMFold.");
       } catch (error) {
         console.error("Error loading structure:", error);
         setError("An error occurred while loading the structure.");
@@ -156,8 +166,8 @@ const CustomStructureViewer = ({
     const renderStructure = async () => {
       setIsLoading(true);
       try {
-        const pdbData = ESMFoldCache[seq] || (await foldStructure(seq));
-        ESMFoldCache[seq] = pdbData;
+        const pdbData = StructureCache[seq] || (await getStructure(seq));
+        StructureCache[seq] = pdbData;
         renderViewer(pdbData);
       } catch (error) {
         console.error("Error folding sequence:", error);
@@ -208,7 +218,7 @@ const CustomStructureViewer = ({
           }}
         />
       )}
-      {message && <small>{message}</small>}
+      {foldedWithESM && <small>Structured generated with ESMFold</small>}
       {warning && <small className="text-yellow-500">{warning}</small>}
       {error && <small className="text-red-500">{error}</small>}
     </div>

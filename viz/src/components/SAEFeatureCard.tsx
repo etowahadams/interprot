@@ -1,17 +1,18 @@
 import { useContext } from "react";
 import { Card, CardContent, CardTitle, CardHeader, CardDescription } from "@/components/ui/card";
 import { SAEContext } from "../SAEContext";
-import SeqViewer from "./SeqViewer";
-import { sequenceToTokens } from "../utils.ts";
+import FullSeqViewer from "./FullSeqViewer";
 
 export default function SAEFeatureCard({
   dim,
   sequence,
   sae_acts,
+  pdbId,
 }: {
   dim: number;
   sequence: string;
   sae_acts: Array<number>;
+  pdbId?: string;
 }) {
   const { selectedModel, SAEConfig } = useContext(SAEContext);
   const desc = SAEConfig.curated?.find((f) => f.dim === dim)?.desc;
@@ -20,7 +21,7 @@ export default function SAEFeatureCard({
       key={dim}
       className="cursor-pointer"
       onClick={() => {
-        window.open(`#/sae-viz/${selectedModel}/${dim}?seq=${sequence}`, "_blank");
+        window.open(`#/sae-viz/${selectedModel}/${dim}?seq=${pdbId || sequence}`);
       }}
     >
       <CardHeader>
@@ -29,12 +30,7 @@ export default function SAEFeatureCard({
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
-          <SeqViewer
-            seq={{
-              tokens_acts_list: sae_acts,
-              tokens_list: sequenceToTokens(sequence),
-            }}
-          />
+          <FullSeqViewer sequence={sequence} activations={sae_acts} showCopy={false} />
         </div>
       </CardContent>
     </Card>

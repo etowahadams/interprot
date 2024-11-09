@@ -20,6 +20,7 @@ import { getSAEAllDimsActivations } from "@/runpod.ts";
 import SeqInput from "./SeqInput";
 import { EXAMPLE_SEQS_FOR_SEARCH } from "./ui/ExampleSeqsForSearch";
 import { Input } from "@/components/ui/input";
+import { isPDBID, getPDBSequence } from "@/utils";
 
 export default function CustomSeqSearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -29,6 +30,7 @@ export default function CustomSeqSearchPage() {
   );
   const [isLoading, setIsLoading] = useState(false);
   const submittedSequence = useRef(searchParams.get("seq") || "");
+  const pdbId = useRef<string | undefined>(undefined);
   const hasSubmittedSequence = submittedSequence.current !== "";
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -66,9 +68,13 @@ export default function CustomSeqSearchPage() {
   const handleSearch = useCallback(
     async (sequence: string) => {
       setIsLoading(true);
-      submittedSequence.current = sequence;
       setSearchParams({ seq: sequence });
 
+      if (isPDBID(sequence)) {
+        pdbId.current = sequence;
+        sequence = await getPDBSequence(sequence);
+      }
+      submittedSequence.current = sequence;
       setSearchResults(await getSAEAllDimsActivations({ sequence }));
       setIsLoading(false);
 
@@ -220,6 +226,7 @@ export default function CustomSeqSearchPage() {
                     key={result.dim}
                     dim={result.dim}
                     sequence={submittedSequence.current}
+                    pdbId={pdbId.current}
                     sae_acts={result.sae_acts}
                   />
                 ))}
