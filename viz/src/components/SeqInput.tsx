@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { isProteinSequence, isPDBID } from "@/utils";
+import { isProteinSequence, isPDBID, getPDBSequence } from "@/utils";
 
 // TODO(liam): We should come up with a better way to handle the input
 // that can either be a sequence or a PDB ID, maybe with some union type.
@@ -22,8 +23,27 @@ export default function SeqInput({
   buttonText: string;
   exampleSeqs?: { [key: string]: string };
 }) {
+  const [error, setError] = useState<string | null>(null);
   const isValidInput = (input: string): boolean => {
     return isProteinSequence(input) || isPDBID(input);
+  };
+
+  const handleSubmit = async () => {
+    // If PBD ID, validate by fetching sequence
+    if (isPDBID(sequence)) {
+      try {
+        await getPDBSequence(sequence);
+      } catch (e) {
+        console.error(e);
+        if (e instanceof Error) {
+          setError(e.message);
+        } else {
+          setError("An unknown error occurred");
+        }
+        return;
+      }
+    }
+    onSubmit(sequence);
   };
 
   return (
@@ -59,12 +79,13 @@ export default function SeqInput({
         </div>
       )}
       <Button
-        onClick={() => onSubmit(sequence)}
+        onClick={handleSubmit}
         className="w-full sm:w-auto"
         disabled={loading || !sequence || !isValidInput(sequence)}
       >
         {loading ? "Loading..." : buttonText}
       </Button>
+      {error && <p className="text-left text-sm text-red-500">{error}</p>}
     </div>
   );
 }
