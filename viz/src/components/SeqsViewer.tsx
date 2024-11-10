@@ -51,9 +51,9 @@ export default function SeqsViewer({ seqs }: SeqsViewerProps) {
 
           const paddedSeq = "-".repeat(leftPadding) + seq.sequence + "-".repeat(rightPadding);
           const paddedActs = Array(leftPadding)
-            .fill(-1)
+            .fill(null)
             .concat(seq.sae_acts)
-            .concat(Array(rightPadding).fill(-1));
+            .concat(Array(rightPadding).fill(null));
 
           return {
             ...seq,
@@ -64,7 +64,7 @@ export default function SeqsViewer({ seqs }: SeqsViewerProps) {
 
         setAlignedSeqs(newAlignedSeqs);
         // Delay scroll until after state update
-        setTimeout(() => scrollToPosition(firstActIndex), 0);
+        setTimeout(() => scrollToPosition(firstActIndex - 30), 0);
         setIsAligning(false);
       } else if (alignmentMode === "max_act") {
         // Max activation alignment
@@ -87,9 +87,9 @@ export default function SeqsViewer({ seqs }: SeqsViewerProps) {
 
           const paddedSeq = "-".repeat(leftPadding) + seq.sequence + "-".repeat(rightPadding);
           const paddedActs = Array(leftPadding)
-            .fill(-1)
+            .fill(null)
             .concat(seq.sae_acts)
-            .concat(Array(rightPadding).fill(-1));
+            .concat(Array(rightPadding).fill(null));
 
           return {
             ...seq,
@@ -100,7 +100,7 @@ export default function SeqsViewer({ seqs }: SeqsViewerProps) {
 
         setAlignedSeqs(newAlignedSeqs);
         // Delay scroll until after state update
-        setTimeout(() => scrollToPosition(maxActIndex), 0);
+        setTimeout(() => scrollToPosition(maxActIndex - 30), 0);
         setIsAligning(false);
       } else if (alignmentMode === "msa") {
         // @ts-expect-error biomsa is loaded through a script tag in index.html
@@ -110,7 +110,7 @@ export default function SeqsViewer({ seqs }: SeqsViewerProps) {
             const alignedSeq = result[i];
             let actIndex = 0;
             // Create new sae_acts array that matches gaps with -1
-            const alignedActs = Array(alignedSeq.length).fill(-1);
+            const alignedActs = Array(alignedSeq.length).fill(null);
 
             // Fill in actual activation values, skipping gaps
             for (let j = 0; j < alignedSeq.length; j++) {
@@ -130,7 +130,7 @@ export default function SeqsViewer({ seqs }: SeqsViewerProps) {
 
           // Scroll to first high activation position
           const firstHighAct = newAlignedSeqs[0].sae_acts.findIndex((act) => act > 0.5);
-          setTimeout(() => scrollToPosition(firstHighAct), 0);
+          setTimeout(() => scrollToPosition(firstHighAct - 30), 0);
           setIsAligning(false);
         });
       }
@@ -139,10 +139,8 @@ export default function SeqsViewer({ seqs }: SeqsViewerProps) {
 
   const scrollToPosition = (index: number) => {
     if (!containerRef.current) return;
-
-    // Each character is roughly 1em wide
-    const charWidth = parseFloat(getComputedStyle(document.documentElement).fontSize);
-    const scrollPosition = Math.max(0, index * charWidth - window.innerWidth / 4);
+    // Each character is 10px wide
+    const scrollPosition = Math.max(0, index * 10);
 
     containerRef.current.scrollTo({
       left: scrollPosition,
@@ -152,7 +150,7 @@ export default function SeqsViewer({ seqs }: SeqsViewerProps) {
 
   // Update maxValue calculation to ignore -1 values (gaps)
   const maxValue = Math.max(
-    ...alignedSeqs.map((seq) => Math.max(...seq.sae_acts.filter((act) => act !== -1)))
+    ...alignedSeqs.map((seq) => Math.max(...seq.sae_acts.filter((act) => act !== null)))
   );
 
   const copySequence = useCallback(async (sequence: string, id: string) => {
@@ -227,10 +225,23 @@ export default function SeqsViewer({ seqs }: SeqsViewerProps) {
                   {seq.sequence.split("").map((char, index) => {
                     // Only color if not a gap and has valid activation
                     const color =
-                      char === "-" || seq.sae_acts[index] === -1
+                      char === "-" || seq.sae_acts[index] === null
                         ? "transparent"
                         : redColorMapHex(seq.sae_acts[index], maxValue);
-                    return (
+                    return seq.sae_acts[index] === null ? (
+                      <span
+                        key={`${seq.alphafold_id}-${index}`}
+                        style={{
+                          cursor: "pointer",
+                          backgroundColor: color,
+                          display: "inline-block",
+                          width: "10px",
+                          textAlign: "center",
+                        }}
+                      >
+                        {char}
+                      </span>
+                    ) : (
                       <TooltipProvider key={`${seq.alphafold_id}-${index}`} delayDuration={100}>
                         <Tooltip>
                           <TooltipTrigger>
@@ -239,7 +250,7 @@ export default function SeqsViewer({ seqs }: SeqsViewerProps) {
                               style={{
                                 backgroundColor: color,
                                 display: "inline-block",
-                                width: "1em",
+                                width: "10px",
                                 textAlign: "center",
                               }}
                             >
@@ -247,7 +258,7 @@ export default function SeqsViewer({ seqs }: SeqsViewerProps) {
                             </span>
                           </TooltipTrigger>
                           <TooltipContent>
-                            Position: {index + 1}, SAE Activation: {seq.sae_acts[index].toFixed(3)}
+                            SAE Activation: {seq.sae_acts[index]?.toFixed(3)}
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
