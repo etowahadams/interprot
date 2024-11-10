@@ -1,25 +1,41 @@
 import "./App.css";
 import { useEffect, useState, useContext } from "react";
 import MolstarMulti from "./components/MolstarMulti";
-import SeqViewer, { SingleSeq } from "./components/SeqViewer";
 import CustomSeqPlayground from "./components/CustomSeqPlayground";
 import { Navigate } from "react-router-dom";
 
 import { SAEContext } from "./SAEContext";
 import { NUM_SEQS_TO_DISPLAY } from "./config";
 import { CONTRIBUTORS } from "./SAEConfigs";
+import SeqsViewer, { SeqWithSAEActs } from "./components/SeqsViewer";
+import { tokensToSequence } from "./utils";
 
 const SAEVisualizerPage: React.FC = () => {
   const { selectedFeature, selectedModel, SAEConfig } = useContext(SAEContext);
   const dimToCuratedMap = new Map(SAEConfig?.curated?.map((i) => [i.dim, i]) || []);
 
-  const [featureData, setFeatureData] = useState<SingleSeq[]>([]);
+  const [featureData, setFeatureData] = useState<SeqWithSAEActs[]>([]);
   useEffect(() => {
     const fileURL = `${SAEConfig.baseUrl}${selectedFeature}.json`;
     fetch(fileURL)
       .then((response) => response.json())
       .then((data) => {
-        setFeatureData(data.slice(0, NUM_SEQS_TO_DISPLAY));
+        // NOTE(liam): important data transformation
+        setFeatureData(
+          data
+            .slice(0, NUM_SEQS_TO_DISPLAY)
+            .map(
+              (seq: {
+                tokens_acts_list: number[];
+                tokens_list: number[];
+                alphafold_id: string;
+              }) => ({
+                sae_acts: seq.tokens_acts_list,
+                sequence: tokensToSequence(seq.tokens_list),
+                alphafold_id: seq.alphafold_id,
+              })
+            )
+        );
       });
   }, [SAEConfig, selectedFeature]);
 
@@ -52,16 +68,9 @@ const SAEVisualizerPage: React.FC = () => {
     <>
       <main className="text-left max-w-full overflow-x-auto">
         <h1 className="text-3xl font-semibold md:mt-0 mt-16">Feature {selectedFeature}</h1>
-        {dimToCuratedMap.has(selectedFeature) && <p className="mt-3">{desc}</p>}
+        {dimToCuratedMap.has(selectedFeature) && <div className="mt-3">{desc}</div>}
         {SAEConfig?.supportsCustomSequence && <CustomSeqPlayground feature={selectedFeature} />}
-        <h2 className="text-2xl font-semibold mt-8">Top activating sequences</h2>
-        <div className="p-4 mt-5 border-2 border-gray-200 border-dashed rounded-lg">
-          <div className="overflow-x-auto">
-            {featureData.map((seq) => (
-              <SeqViewer seq={seq} key={`seq-${seq.alphafold_id}`} />
-            ))}
-          </div>
-        </div>
+        <SeqsViewer seqs={featureData} />
         <MolstarMulti proteins={featureData} />
       </main>
     </>

@@ -34,7 +34,6 @@ export default function SeqInput({
         await getPDBSequence(input);
         return true;
       } catch (e) {
-        console.log("here", e);
         if (e instanceof Error) {
           setError(e.message);
         } else {

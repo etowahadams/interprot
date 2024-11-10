@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import SeqViewer from "./SeqViewer";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { isPDBID, getPDBSequence, sequenceToTokens } from "@/utils.ts";
+import { isPDBID, getPDBSequence } from "@/utils.ts";
 import CustomStructureViewer from "./CustomStructureViewer";
 import { getSAEDimActivations, getSteeredSequence } from "@/runpod.ts";
 import SeqInput from "./SeqInput";
@@ -225,12 +224,7 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
               {steeredActivations.length > 0 && (
                 <>
                   <div className="overflow-x-auto my-4">
-                    <SeqViewer
-                      seq={{
-                        tokens_acts_list: steeredActivations,
-                        tokens_list: sequenceToTokens(steeredSeq),
-                      }}
-                    />
+                    <FullSeqViewer sequence={steeredSeq} activations={steeredActivations} />
                   </div>
                   <CustomStructureViewer
                     viewerId="steered-viewer"

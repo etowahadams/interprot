@@ -7,14 +7,10 @@ import { Color } from "molstar/lib/mol-util/color";
 import proteinEmoji from "../protein.png";
 import { redColorMapRGB } from "@/utils.ts";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
-interface ProteinData {
-  alphafold_id: string;
-  tokens_acts_list: Array<number>;
-}
+import { SeqWithSAEActs } from "./SeqsViewer";
 
 interface MolstarViewerProps {
-  proteins: ProteinData[];
+  proteins: SeqWithSAEActs[];
 }
 
 const PROTEIN_CANVAS_SIZE = 400;
@@ -74,7 +70,7 @@ const MolstarMulti: React.FC<MolstarViewerProps> = ({ proteins }) => {
 
   const loadStructure = async (
     plugin: PluginContext,
-    protein: ProteinData,
+    protein: SeqWithSAEActs,
     index: number,
     isInteractive: boolean = false
   ) => {
@@ -82,7 +78,7 @@ const MolstarMulti: React.FC<MolstarViewerProps> = ({ proteins }) => {
       const fileName = `https://alphafold.ebi.ac.uk/files/AF-${protein.alphafold_id}-F1-model_v4.cif`;
 
       const themeName = Math.random().toString(36).substring(7);
-      const ResidueColorTheme = createResidueColorTheme(protein.tokens_acts_list, themeName);
+      const ResidueColorTheme = createResidueColorTheme(protein.sae_acts, themeName);
       plugin.representation.structure.themes.colorThemeRegistry.add(
         ResidueColorTheme.colorThemeProvider!
       );
