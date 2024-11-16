@@ -23,7 +23,9 @@ NUM_SEQS_PER_DIM = 12
 def get_esm_layer_acts(
     seq: str, tokenizer: AutoTokenizer, plm_model: EsmModel, plm_layer: int
 ) -> torch.Tensor:
-    return get_layer_activations(tokenizer=tokenizer, plm=plm_model, seqs=[seq], layer=plm_layer)[0]
+    return get_layer_activations(
+        tokenizer=tokenizer, plm=plm_model, seqs=[seq], layer=plm_layer
+    )[0]
 
 
 @click.command()
@@ -55,11 +57,15 @@ def make_viz_files(checkpoint_files: list[str], sequences_file: str):
         if matches:
             plm_dim, plm_layer, sae_dim = map(int, matches.groups())
         else:
-            raise ValueError("Checkpoint file must be named in the format plm<n>_l<n>_sae<n>")
+            raise ValueError(
+                "Checkpoint file must be named in the format plm<n>_l<n>_sae<n>"
+            )
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         tokenizer = AutoTokenizer.from_pretrained("facebook/esm2_t33_650M_UR50D")
-        plm_model = EsmModel.from_pretrained("facebook/esm2_t33_650M_UR50D").to(device).eval()
+        plm_model = (
+            EsmModel.from_pretrained("facebook/esm2_t33_650M_UR50D").to(device).eval()
+        )
         sae_model = SparseAutoencoder(plm_dim, sae_dim).to(device)
 
         try:
@@ -74,24 +80,28 @@ def make_viz_files(checkpoint_files: list[str], sequences_file: str):
                 }
             )
 
-
         df = pl.read_parquet(sequences_file)
-        has_interpro = 'InterPro' in df.columns
+        has_interpro = "InterPro" in df.columns
         if has_interpro:
-            df = df.with_columns(pl.col('InterPro').str.split(';').alias('interpro_ids'))
+            df = df.with_columns(
+                pl.col("InterPro").str.split(";").alias("interpro_ids")
+            )
         # sae_dim x len(df) numpy array to store the top activations for each sequence
         all_seqs_max_act = np.zeros((sae_dim, len(df)))
 
-
         for seq_idx, row in tqdm(
-            enumerate(df.iter_rows(named=True)), total=len(df), desc="Running inference over all seqs (Step 1/3)"
+            enumerate(df.iter_rows(named=True)),
+            total=len(df),
+            desc="Running inference over all seqs (Step 1/3)",
         ):
             seq = row["Sequence"]
             esm_layer_acts = get_esm_layer_acts(seq, tokenizer, plm_model, plm_layer)
             sae_acts = (
                 # [1:-1] is to Trim BOS and EOS tokens
-                sae_model.get_acts(esm_layer_acts)[1:-1].cpu().numpy() 
-            )  
+                sae_model.get_acts(esm_layer_acts)[1:-1]
+                .cpu()
+                .numpy()
+            )
             all_seqs_max_act[:, seq_idx] = np.max(sae_acts, axis=0)
             del sae_acts
         with open(os.path.join(OUTPUT_ROOT_DIR, "all_seqs_max_act.npy"), "wb") as f:
@@ -100,13 +110,17 @@ def make_viz_files(checkpoint_files: list[str], sequences_file: str):
         hidden_dim_to_seqs = {dim: {} for dim in range(sae_dim)}
 
         # Calculate the top seqeunces for each hidden dimension and quartile
-        quartile_names = ['Q1', 'Q2', 'Q3', 'Q4']
-        for dim in tqdm(range(sae_dim), desc="Finding highest activating seqs (Step 2/3)"):
+        quartile_names = ["Q1", "Q2", "Q3", "Q4"]
+        for dim in tqdm(
+            range(sae_dim), desc="Finding highest activating seqs (Step 2/3)"
+        ):
             dim_maxes = all_seqs_max_act[dim]
             if np.all(dim_maxes == 0):
                 continue
             non_zero_maxes = dim_maxes[dim_maxes > 0]
-            hidden_dim_to_seqs[dim]['freq_activate_among_all_seqs'] = len(non_zero_maxes) / len(dim_maxes)
+            hidden_dim_to_seqs[dim]["freq_activate_among_all_seqs"] = len(
+                non_zero_maxes
+            ) / len(dim_maxes)
             quartiles = np.percentile(non_zero_maxes, [25, 50, 75])
 
             q1_mask = (dim_maxes > 0) & (dim_maxes <= quartiles[0])
@@ -114,64 +128,84 @@ def make_viz_files(checkpoint_files: list[str], sequences_file: str):
             q3_mask = (dim_maxes > quartiles[1]) & (dim_maxes <= quartiles[2])
             q4_mask = dim_maxes > quartiles[2]
 
-            quartile_indices = [np.where(mask)[0] for mask in [q1_mask, q2_mask, q3_mask, q4_mask]]
+            quartile_indices = [
+                np.where(mask)[0] for mask in [q1_mask, q2_mask, q3_mask, q4_mask]
+            ]
             for q_name, q_indices in zip(quartile_names, quartile_indices):
-                top_indices = heapq.nlargest(NUM_SEQS_PER_DIM, q_indices, key=lambda i: dim_maxes[i])
+                top_indices = heapq.nlargest(
+                    NUM_SEQS_PER_DIM, q_indices, key=lambda i: dim_maxes[i]
+                )
                 hidden_dim_to_seqs[dim][q_name] = {}
-                hidden_dim_to_seqs[dim][q_name]['n_seqs'] = len(q_indices)
-                hidden_dim_to_seqs[dim][q_name]['indices'] = top_indices
+                hidden_dim_to_seqs[dim][q_name]["n_seqs"] = len(q_indices)
+                hidden_dim_to_seqs[dim][q_name]["indices"] = top_indices
                 if has_interpro:
-                    hidden_dim_to_seqs[dim][q_name]['interpro'] = get_top_interpro(df, q_indices, top_n=10)
-            
+                    hidden_dim_to_seqs[dim][q_name]["interpro"] = get_top_interpro(
+                        df, q_indices, top_n=10
+                    )
+
         for dim in tqdm(range(sae_dim), desc="Writing visualization files (Step 3/3)"):
-            viz_file = {
-                "quartiles": {}
-            }
+            viz_file = {"quartiles": {}}
             # Add the non_zero_freq to the viz file
-            if 'freq_activate_among_all_seqs' in hidden_dim_to_seqs[dim]:
-                viz_file["freq_activate_among_all_seqs"] = hidden_dim_to_seqs[dim]['freq_activate_among_all_seqs']
+            if "freq_activate_among_all_seqs" in hidden_dim_to_seqs[dim]:
+                viz_file["freq_activate_among_all_seqs"] = hidden_dim_to_seqs[dim][
+                    "freq_activate_among_all_seqs"
+                ]
             for quartile in quartile_names:
                 if quartile not in hidden_dim_to_seqs[dim]:
                     continue
                 quartile_examples = {
                     "examples": [],
-                    "n_seqs": hidden_dim_to_seqs[dim][quartile]['n_seqs']
+                    "n_seqs": hidden_dim_to_seqs[dim][quartile]["n_seqs"],
                 }
                 if has_interpro:
-                    quartile_examples['interpro'] = hidden_dim_to_seqs[dim][quartile]['interpro']
-                quartile_indices = hidden_dim_to_seqs[dim][quartile]['indices']
+                    quartile_examples["interpro"] = hidden_dim_to_seqs[dim][quartile][
+                        "interpro"
+                    ]
+                quartile_indices = hidden_dim_to_seqs[dim][quartile]["indices"]
                 # Generate the examples for the quartile
                 for seq_idx in quartile_indices:
                     seq_idx = int(seq_idx)
                     seq = df[seq_idx]["Sequence"].item()
-                    esm_layer_acts = get_esm_layer_acts(seq, tokenizer, plm_model, plm_layer)
+                    esm_layer_acts = get_esm_layer_acts(
+                        seq, tokenizer, plm_model, plm_layer
+                    )
                     sae_acts = (
                         # [1:-1] is to Trim BOS and EOS tokens
-                        sae_model.get_acts(esm_layer_acts)[1:-1].cpu().numpy() 
+                        sae_model.get_acts(esm_layer_acts)[1:-1]
+                        .cpu()
+                        .numpy()
                     )
                     dim_acts = sae_acts[:, dim]
                     uniprot_id = df[seq_idx]["Entry"].item()[:-1]
                     alphafolddb_id = df[seq_idx]["AlphaFoldDB"].item().split(";")[0]
                     protein_name = df[seq_idx]["Protein names"].item()
-                    
+
                     examples = {
                         "sae_acts": [round(float(act), 1) for act in dim_acts],
                         "sequence": seq,
                         "alphafold_id": alphafolddb_id,
                         "uniprot_id": uniprot_id,
-                        "name": protein_name
+                        "name": protein_name,
                     }
                     quartile_examples["examples"].append(examples)
-                viz_file['quartiles'][quartile] = quartile_examples
-            
+                viz_file["quartiles"][quartile] = quartile_examples
+
             with open(os.path.join(OUTPUT_ROOT_DIR, f"{dim}.json"), "w") as f:
                 json.dump(viz_file, f)
+
 
 def get_top_interpro(original_df, indices, top_n=5):
     df = original_df[indices]
     total_rows = len(df)
-    counts = df.explode('interpro_ids')['interpro_ids'].drop_nulls().value_counts().sort('count', descending=True)[1:top_n+1]
-    freq_table = counts.with_columns(pl.col('count') / total_rows).rename({'count': 'freq'})
+    counts = (
+        df.explode("interpro_ids")["interpro_ids"]
+        .drop_nulls()
+        .value_counts()
+        .sort("count", descending=True)[1 : top_n + 1]
+    )
+    freq_table = counts.with_columns(pl.col("count") / total_rows).rename(
+        {"count": "freq"}
+    )
     freq_dict = freq_table.to_dict()
     return {key: value.to_list() for key, value in freq_dict.items()}
 
