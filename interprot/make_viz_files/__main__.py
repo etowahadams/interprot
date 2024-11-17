@@ -81,7 +81,6 @@ def make_viz_files(checkpoint_files: list[str], sequences_file: str):
             )
 
         df = pl.read_parquet(sequences_file)
-        df = df[:2]
         has_interpro = "InterPro" in df.columns
         if has_interpro:
             df = df.with_columns(
