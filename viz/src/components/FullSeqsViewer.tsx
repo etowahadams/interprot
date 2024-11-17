@@ -38,7 +38,9 @@ const FullSeqsViewer: React.FC<FullSeqViewerProps> = ({ proteinActivationsData }
         {groupedChains.map(({ ids, chain }, index) => (
           <React.Fragment key={ids.join(",")}>
             <div className="mr-4">
-              {ids[0] !== "Unknown" && <div className="font-bold mb-1">Chain {ids.join(", ")}</div>}
+              {ids[0] !== "Unknown" && ids.length > 1 && (
+                <div className="font-medium mb-2">Chain {ids.join(", ")}</div>
+              )}
               <div
                 className="flex flex-wrap"
                 style={{

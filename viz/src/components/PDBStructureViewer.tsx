@@ -52,11 +52,12 @@ const PDBStructureViewer = ({
         const map = new Map<ElementIndex, { residueIdx: number; chainId: string }>();
         const { chains, residueAtomSegments, chainAtomSegments } = model.atomicHierarchy;
 
+        // Map each residue to its index on the chain. TODO: There might be a better way to do
+        // this than iterating over all atoms.
         for (let i = 0, _i = model.atomicHierarchy.atoms._rowCount; i < _i; i++) {
           const residueIdx = residueAtomSegments.index[i];
           const chainIdx = chainAtomSegments.index[i];
           const chainId = chains.auth_asym_id.value(chainIdx);
-
           const chainStartResidue = AtomicHierarchy.chainStartResidueIndex(
             { residueAtomSegments, chainAtomSegments },
             chainIdx
@@ -74,7 +75,9 @@ const PDBStructureViewer = ({
         getColor(p: { residueIdx: number; chainId: string }) {
           const { residueIdx, chainId } = p;
           const activations = chainActivations[chainId];
-          if (!activations) {
+
+          // If there is no activation, use a faint default color of the chain.
+          if (!activations || !activations[residueIdx]) {
             if (!chainColors.has(chainId)) {
               const colorIndex = chainColors.size % defaultChainColors.length;
               chainColors.set(chainId, defaultChainColors[colorIndex]);
@@ -82,17 +85,9 @@ const PDBStructureViewer = ({
             return chainColors.get(chainId)!;
           }
 
-          const activation = activations[residueIdx];
-          if (!activation) {
-            // Same chain-based default coloring
-            if (!chainColors.has(chainId)) {
-              const colorIndex = chainColors.size % defaultChainColors.length;
-              chainColors.set(chainId, defaultChainColors[colorIndex]);
-            }
-            return chainColors.get(chainId)!;
-          }
-
-          const color = maxValue > 0 ? redColorMapRGB(activation, maxValue) : [255, 255, 255];
+          // Otherwise, use the activation value to color the residue.
+          const color =
+            maxValue > 0 ? redColorMapRGB(activations[residueIdx], maxValue) : [255, 255, 255];
           return Color.fromRgb(color[0], color[1], color[2]);
         },
         defaultColor: Color(0xffffff),
