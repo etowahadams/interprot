@@ -88,6 +88,7 @@ def make_viz_files(checkpoint_files: list[str], sequences_file: str):
 
         # Pre-allocate numpy array for storing max activations
         all_seqs_max_act = np.zeros((sae_dim, len(df)))
+        all_acts = [0 for _ in range(len(df))]
 
         for seq_idx, row in tqdm(
             enumerate(df.iter_rows(named=True)),
@@ -104,7 +105,8 @@ def make_viz_files(checkpoint_files: list[str], sequences_file: str):
             # Move to CPU and convert to numpy immediately
             sae_acts_cpu = sae_acts.cpu().numpy()
             all_seqs_max_act[:, seq_idx] = np.max(sae_acts_cpu, axis=0)
-
+            sae_acts_int = (sae_acts_cpu * 10).astype(np.int8)
+            all_acts[seq_idx] = sae_acts_int
             # Clear CUDA cache periodically
             if seq_idx % 100 == 0:
                 torch.cuda.empty_cache()
@@ -170,18 +172,14 @@ def make_viz_files(checkpoint_files: list[str], sequences_file: str):
 
                 for seq_idx in quartile_indices:
                     seq_idx = int(seq_idx)
-                    seq = df[seq_idx]["Sequence"].item()
-                    esm_layer_acts = get_esm_layer_acts(
-                        seq, tokenizer, plm_model, plm_layer
-                    )
-                    sae_acts = sae_model.get_acts(esm_layer_acts)[1:-1].cpu().numpy()
+                    sae_acts = all_acts[seq_idx]
                     dim_acts = sae_acts[:, dim]
                     uniprot_id = df[seq_idx]["Entry"].item()[:-1]
                     alphafolddb_id = df[seq_idx]["AlphaFoldDB"].item().split(";")[0]
                     protein_name = df[seq_idx]["Protein names"].item()
 
                     examples = {
-                        "sae_acts": [round(float(act), 1) for act in dim_acts],
+                        "sae_acts": [round(float(act) / 10, 1) for act in dim_acts],
                         "sequence": seq,
                         "alphafold_id": alphafolddb_id,
                         "uniprot_id": uniprot_id,
@@ -202,7 +200,8 @@ def get_top_interpro(original_df, indices, top_n=5):
         df.explode("interpro_ids")["interpro_ids"]
         .drop_nulls()
         .value_counts()
-        .sort("count", descending=True)[1 : top_n + 1]
+        .sort("count", descending=True)
+        .filter(pl.col("interpro_ids") != "")[:top_n]
     )
     freq_table = counts.with_columns(pl.col("count") / total_rows).rename(
         {"count": "freq"}
