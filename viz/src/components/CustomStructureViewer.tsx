@@ -6,27 +6,27 @@ import { Model, ElementIndex } from "molstar/lib/mol-model/structure";
 import { Color } from "molstar/lib/mol-util/color";
 import proteinEmoji from "../protein.png";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ProteinSequence, StructureCache, redColorMapRGB } from "@/utils";
+import { AminoAcidSequence, ProteinActivationsData, StructureCache, redColorMapRGB } from "@/utils";
 
 interface CustomStructureViewerProps {
   viewerId: string;
-  sequence: ProteinSequence;
-  activations: number[];
+  proteinActivationsData: ProteinActivationsData;
   onLoad?: () => void;
 }
 
 const CustomStructureViewer = ({
   viewerId,
-  sequence,
-  activations,
+  proteinActivationsData,
   onLoad,
 }: CustomStructureViewerProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [warning, setWarning] = useState("");
   const isMobile = useIsMobile();
-
   const pluginRef = useRef<PluginContext | null>(null);
+
+  // Assume there is only one chain for a user inputted protein
+  const { sequence, activations } = proteinActivationsData.chains[0];
 
   const createResidueColorTheme = (activationList: number[], name = "residue-colors") => {
     const maxValue = Math.max(...activationList);
@@ -58,7 +58,7 @@ const CustomStructureViewer = ({
   };
 
   useEffect(() => {
-    const getStructure = async (sequence: ProteinSequence) => {
+    const getStructure = async (sequence: AminoAcidSequence) => {
       const response = await fetch("https://api.esmatlas.com/foldSequence/v1/pdb/", {
         method: "POST",
         headers: {
@@ -202,8 +202,11 @@ const CustomStructureViewer = ({
           }}
         />
       )}
-      <small>Structured generated with ESMFold</small>
-      {warning && <small className="text-yellow-500">{warning}</small>}
+      {warning ? (
+        <small className="text-yellow-500">{warning}</small>
+      ) : (
+        <small>Structured generated with ESMFold</small>
+      )}
       {error && <small className="text-red-500">{error}</small>}
     </div>
   );

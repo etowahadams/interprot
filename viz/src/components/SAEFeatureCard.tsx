@@ -2,17 +2,14 @@ import { useContext } from "react";
 import { Card, CardContent, CardTitle, CardHeader, CardDescription } from "@/components/ui/card";
 import { SAEContext } from "../SAEContext";
 import FullSeqsViewer from "./FullSeqsViewer";
-import { ProteinSequence } from "@/utils";
+import { ProteinActivationsData } from "@/utils";
 
 export default function SAEFeatureCard({
   dim,
-  sequence,
-  sae_acts,
+  proteinActivationsData,
 }: {
   dim: number;
-  sequence: ProteinSequence;
-  sae_acts: Array<number>;
-  pdbId?: string;
+  proteinActivationsData: ProteinActivationsData;
 }) {
   const { SAEConfig, setSelectedFeature } = useContext(SAEContext);
   const desc = SAEConfig.curated?.find((f) => f.dim === dim)?.desc;
@@ -30,9 +27,7 @@ export default function SAEFeatureCard({
         {desc && <CardDescription>{desc}</CardDescription>}
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
-          <FullSeqsViewer sequence={sequence} activations={sae_acts} showCopy={false} />
-        </div>
+        <FullSeqsViewer proteinActivationsData={proteinActivationsData} />
       </CardContent>
     </Card>
   );

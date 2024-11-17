@@ -1,13 +1,21 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { isPDBID, isProteinSequence, ProteinSequence, getPDBSeqsData } from "@/utils.ts";
+import {
+  isPDBID,
+  isProteinSequence,
+  AminoAcidSequence,
+  ProteinActivationsData,
+  constructProteinActivationsDataFromSequence,
+  constructProteinActivationsDataFromPDBID,
+} from "@/utils.ts";
 import CustomStructureViewer from "./CustomStructureViewer";
 import { getSAEDimActivations, getSteeredSequence } from "@/runpod.ts";
 import SeqInput, { ValidSeqInput } from "./SeqInput";
 import { useSearchParams } from "react-router-dom";
 import FullSeqsViewer from "./FullSeqsViewer";
 import PDBStructureViewer from "./PDBStructureViewer";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface CustomSeqPlaygroundProps {
   feature: number;
@@ -20,8 +28,8 @@ enum PlaygroundState {
 }
 
 const initialState = {
-  customSeqActivations: {} as { [key: string]: number[] },
-  customSeqInput: "",
+  inputProteinActivations: {} as ProteinActivationsData,
+  proteinInput: "",
   playgroundState: PlaygroundState.IDLE,
   steeredSeq: "",
   steerMultiplier: 1,
@@ -31,10 +39,10 @@ const initialState = {
 const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
   // [chainIndex][residueIndex] array to account for the fact that PDB structures may have multiple chains.
   // If user is not inputting a PDB ID, this will always be a 1D array.
-  const [customSeqActivations, setCustomSeqActivations] = useState<{ [key: string]: number[] }>(
-    initialState.customSeqActivations
+  const [inputProteinActivations, setInputProteinActivations] = useState<ProteinActivationsData>(
+    initialState.inputProteinActivations
   );
-  const [customSeqInput, setCustomSeqInput] = useState<string>(initialState.customSeqInput);
+  const [proteinInput, setCustomSeqInput] = useState<string>(initialState.proteinInput);
   const submittedInputRef = useRef<ValidSeqInput | undefined>(undefined);
 
   const [playgroundState, setViewerState] = useState<PlaygroundState>(initialState.playgroundState);
@@ -61,32 +69,21 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
       setViewerState(PlaygroundState.LOADING_SAE_ACTIVATIONS);
 
       // Reset some states related to downstream actions
-      setCustomSeqActivations(initialState.customSeqActivations);
+      setInputProteinActivations(initialState.inputProteinActivations);
       setSteeredSeq(initialState.steeredSeq);
       setSteerMultiplier(initialState.steerMultiplier);
       setSteeredActivations(initialState.steeredActivations);
 
       submittedInputRef.current = submittedInput;
       if (isPDBID(submittedInput)) {
-        // PDB structures may have multiple chains. Get SAE activations for each chain.
-        const pdbSeqsData = await getPDBSeqsData(submittedInput);
-        const activationsPromises = await Promise.all(
-          pdbSeqsData.map(async (pdbSeqData) => [
-            pdbSeqData.chainId,
-            await getSAEDimActivations({
-              sequence: pdbSeqData.sequence,
-              dim: feature,
-            }),
-          ])
+        setInputProteinActivations(
+          await constructProteinActivationsDataFromPDBID(submittedInput, feature)
         );
-        setCustomSeqActivations(Object.fromEntries(activationsPromises));
         setSearchParams({ pdb: submittedInput });
       } else {
-        const saeActivations = await getSAEDimActivations({
-          sequence: submittedInput,
-          dim: feature,
-        });
-        setCustomSeqActivations({ Unknown: saeActivations });
+        setInputProteinActivations(
+          await constructProteinActivationsDataFromSequence(submittedInput, feature)
+        );
         setSearchParams({ seq: submittedInput });
       }
     },
@@ -95,7 +92,7 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
 
   // Reset some states when the user navigates to a new feature
   useEffect(() => {
-    setCustomSeqActivations(initialState.customSeqActivations);
+    setInputProteinActivations(initialState.inputProteinActivations);
     setViewerState(initialState.playgroundState);
     setSteeredSeq(initialState.steeredSeq);
     setSteerMultiplier(initialState.steerMultiplier);
@@ -124,7 +121,7 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
     }
 
     lastInputUpdateSource.current = null;
-  }, [searchParams, customSeqActivations.length, handleSubmit]);
+  }, [searchParams, handleSubmit]);
 
   const handleSteer = async () => {
     setViewerState(PlaygroundState.LOADING_STEERED_SEQUENCE);
@@ -148,7 +145,7 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
     <div>
       <div className="mt-5">
         <SeqInput
-          input={customSeqInput}
+          input={proteinInput}
           setInput={setCustomSeqInput}
           onSubmit={handleSubmit}
           loading={playgroundState === PlaygroundState.LOADING_SAE_ACTIVATIONS}
@@ -161,16 +158,18 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
       </div>
 
       {/* Once we have SAE activations, display sequence and structure */}
-      {submittedInputRef.current && Object.keys(customSeqActivations).length > 0 && (
+      {submittedInputRef.current && Object.keys(inputProteinActivations).length > 0 && (
         <>
-          <div className="overflow-x-auto my-4">
-            {/* <FullSeqsViewer
-              sequence={submittedInputRef.current as ProteinSequence}
-              activations={customSeqActivations.Unknown} // FIXME: handle multiple chains
-            /> */}
-          </div>
-          {Object.values(customSeqActivations).every((chainActivations) =>
-            chainActivations.every((activation) => activation === 0)
+          <Card className="my-4">
+            <CardHeader>
+              <CardTitle>SAE activations on input protein</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <FullSeqsViewer proteinActivationsData={inputProteinActivations} />
+            </CardContent>
+          </Card>
+          {inputProteinActivations.chains.every((chain) =>
+            chain.activations.every((activation) => activation === 0)
           ) && (
             <p className="text-sm mb-2">
               This feature did not activate on your sequence. Try a sequence more similar to the
@@ -181,15 +180,13 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
           {isPDBID(submittedInputRef.current) ? (
             <PDBStructureViewer
               viewerId="custom-viewer"
-              pdbId={submittedInputRef.current}
-              chainActivations={customSeqActivations}
+              proteinActivationsData={inputProteinActivations}
               onLoad={onStructureLoad}
             />
           ) : (
             <CustomStructureViewer
               viewerId="custom-viewer"
-              sequence={submittedInputRef.current}
-              activations={customSeqActivations[0]}
+              proteinActivationsData={inputProteinActivations}
               onLoad={onStructureLoad}
             />
           )}
@@ -197,7 +194,7 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
       )}
 
       {/* Once we have SAE activations and the first structure has loaded, render the steering controls */}
-      {Object.keys(customSeqActivations).length > 0 &&
+      {Object.keys(inputProteinActivations).length > 0 &&
         playgroundState !== PlaygroundState.LOADING_SAE_ACTIVATIONS && (
           <div className="mt-5">
             <h3 className="text-xl font-bold mb-4">Sequence Editing via Steering</h3>
@@ -283,16 +280,36 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
 
               {steeredActivations.length > 0 && (
                 <>
-                  <div className="overflow-x-auto my-4">
-                    <FullSeqsViewer
-                      sequence={steeredSeq as ProteinSequence}
-                      activations={steeredActivations}
-                    />
-                  </div>
+                  <Card className="my-4">
+                    <CardHeader>
+                      <CardTitle>SAE activations on steered protein</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <FullSeqsViewer
+                        proteinActivationsData={{
+                          chains: [
+                            {
+                              id: "Unknown",
+                              sequence: steeredSeq as AminoAcidSequence,
+                              activations: steeredActivations,
+                            },
+                          ],
+                        }}
+                      />
+                    </CardContent>
+                  </Card>
+
                   <CustomStructureViewer
                     viewerId="steered-viewer"
-                    sequence={steeredSeq as ProteinSequence}
-                    activations={steeredActivations}
+                    proteinActivationsData={{
+                      chains: [
+                        {
+                          id: "Unknown",
+                          sequence: steeredSeq as AminoAcidSequence,
+                          activations: steeredActivations,
+                        },
+                      ],
+                    }}
                     onLoad={onStructureLoad}
                   />
                 </>

@@ -4,7 +4,7 @@ import { PluginContext } from "molstar/lib/mol-plugin/context";
 import { CustomElementProperty } from "molstar/lib/mol-model-props/common/custom-element-property";
 import { Model, ElementIndex } from "molstar/lib/mol-model/structure";
 import { Color } from "molstar/lib/mol-util/color";
-import { redColorMapRGB } from "@/utils.ts";
+import { ProteinActivationsData, redColorMapRGB } from "@/utils.ts";
 import proteinEmoji from "../protein.png";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { StructureCache, PDBID } from "@/utils";
@@ -12,15 +12,13 @@ import { AtomicHierarchy } from "molstar/lib/mol-model/structure/model/propertie
 
 interface PDBStructureViewerProps {
   viewerId: string;
-  pdbId: PDBID;
-  chainActivations: { [key: string]: number[] };
+  proteinActivationsData: ProteinActivationsData;
   onLoad?: () => void;
 }
 
 const PDBStructureViewer = ({
   viewerId,
-  pdbId,
-  chainActivations,
+  proteinActivationsData,
   onLoad,
 }: PDBStructureViewerProps) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -158,7 +156,12 @@ const PDBStructureViewer = ({
       plugin.initViewer(canvas, container as HTMLDivElement);
 
       const themeName = Math.random().toString(36).substring(7);
-      const ResidueColorTheme = createResidueColorTheme(chainActivations, themeName);
+      const ResidueColorTheme = createResidueColorTheme(
+        Object.fromEntries(
+          proteinActivationsData.chains.map((chain) => [chain.id, chain.activations])
+        ),
+        themeName
+      );
       plugin.representation.structure.themes.colorThemeRegistry.add(
         ResidueColorTheme.colorThemeProvider!
       );
@@ -192,8 +195,10 @@ const PDBStructureViewer = ({
     const renderStructure = async () => {
       setIsLoading(true);
       try {
-        const pdbData = StructureCache[pdbId] || (await getStructure(pdbId));
-        StructureCache[pdbId] = pdbData;
+        const pdbData =
+          StructureCache[proteinActivationsData.pdbId] ||
+          (await getStructure(proteinActivationsData.pdbId));
+        StructureCache[proteinActivationsData.pdbId] = pdbData;
         renderViewer(pdbData);
       } catch (error) {
         console.error("Error folding sequence:", error);
@@ -201,7 +206,7 @@ const PDBStructureViewer = ({
       }
     };
 
-    if (!pdbId || Object.keys(chainActivations).length === 0) {
+    if (!proteinActivationsData.pdbId || proteinActivationsData.chains.length === 0) {
       onLoad?.();
       return;
     }
@@ -216,7 +221,7 @@ const PDBStructureViewer = ({
         pluginRef.current = null;
       }
     };
-  }, [pdbId, chainActivations, onLoad, viewerId]);
+  }, [proteinActivationsData, onLoad, viewerId]);
 
   if (isLoading) {
     return (

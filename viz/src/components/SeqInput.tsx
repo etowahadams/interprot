@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { isProteinSequence, isPDBID, ProteinSequence, PDBID, getPDBSeqsData } from "@/utils";
+import { isProteinSequence, isPDBID, AminoAcidSequence, PDBID, getPDBChainsData } from "@/utils";
 
-export type ValidSeqInput = ProteinSequence | PDBID;
+export type ValidSeqInput = AminoAcidSequence | PDBID;
 
 export default function SeqInput({
   input,
@@ -19,7 +19,7 @@ export default function SeqInput({
   onSubmit: (input: ValidSeqInput) => void;
   loading: boolean;
   buttonText: string;
-  exampleSeqs?: { [key: string]: ProteinSequence };
+  exampleSeqs?: { [key: string]: AminoAcidSequence };
   onClear?: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +33,7 @@ export default function SeqInput({
       onSubmit(input);
     } else if (isPDBID(input)) {
       try {
-        await getPDBSeqsData(input);
+        await getPDBChainsData(input);
         onSubmit(input);
       } catch (e) {
         if (e instanceof Error) {
