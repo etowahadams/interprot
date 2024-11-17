@@ -11,6 +11,8 @@ import polars as pl
 import torch
 from tqdm import tqdm
 from transformers import AutoTokenizer, EsmModel
+from contextlib import contextmanager
+from torch.cuda import empty_cache
 
 from interprot.sae_model import SparseAutoencoder
 from interprot.utils import get_layer_activations
@@ -18,14 +20,27 @@ from interprot.utils import get_layer_activations
 OUTPUT_ROOT_DIR = "viz_files"
 NUM_SEQS_PER_DIM = 12
 
+@contextmanager
+def clear_gpu_memory():
+    try:
+        yield
+    finally:
+        empty_cache()
+
 
 @lru_cache(maxsize=100000)
 def get_esm_layer_acts(
     seq: str, tokenizer: AutoTokenizer, plm_model: EsmModel, plm_layer: int
 ) -> torch.Tensor:
-    return get_layer_activations(
-        tokenizer=tokenizer, plm=plm_model, seqs=[seq], layer=plm_layer
-    )[0]
+    
+    with torch.no_grad(), clear_gpu_memory():
+        acts = get_layer_activations(
+            tokenizer=tokenizer, plm=plm_model, seqs=[seq], layer=plm_layer
+        )[0]
+
+        empty_cache()
+
+    return acts
 
 
 @click.command()
