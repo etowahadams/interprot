@@ -111,12 +111,13 @@ def make_viz_files(checkpoint_files: list[str], sequences_file: str):
         ):
             seq = row["Sequence"]
             esm_layer_acts = get_esm_layer_acts(seq, tokenizer, plm_model, plm_layer)
-            sae_acts = sae_model.get_acts(esm_layer_acts)[1:-1]
-            sae_acts_cpu = sae_acts.cpu().numpy()
-            all_seqs_max_act[:, seq_idx] = np.max(sae_acts_cpu, axis=0)
-            
-            del esm_layer_acts
-            del sae_acts_cpu
+            sae_acts = (
+                # [1:-1] is to Trim BOS and EOS tokens
+                sae_model.get_acts(esm_layer_acts)[1:-1]
+                .cpu()
+                .numpy()
+            )
+            all_seqs_max_act[:, seq_idx] = np.max(sae_acts, axis=0)
             del sae_acts
         with open(os.path.join(OUTPUT_ROOT_DIR, "all_seqs_max_act.npy"), "wb") as f:
             np.save(f, all_seqs_max_act)
