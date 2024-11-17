@@ -2,7 +2,6 @@ import heapq
 import json
 import os
 import re
-from functools import lru_cache
 from typing import Any
 
 import click
@@ -19,15 +18,13 @@ OUTPUT_ROOT_DIR = "viz_files"
 NUM_SEQS_PER_DIM = 12
 
 
-@lru_cache(maxsize=100000)
 def get_esm_layer_acts(
     seq: str, tokenizer: AutoTokenizer, plm_model: EsmModel, plm_layer: int
 ) -> torch.Tensor:
-    with torch.no_grad():  # Add no_grad context
-        acts = get_layer_activations(
-            tokenizer=tokenizer, plm=plm_model, seqs=[seq], layer=plm_layer
-        )[0]
-        return acts.detach()  # Detach tensor from computation graph
+    acts = get_layer_activations(
+        tokenizer=tokenizer, plm=plm_model, seqs=[seq], layer=plm_layer
+    )[0]
+    return acts
 
 
 @click.command()
@@ -88,31 +85,29 @@ def make_viz_files(checkpoint_files: list[str], sequences_file: str):
             df = df.with_columns(
                 pl.col("InterPro").str.split(";").alias("interpro_ids")
             )
-        
+
         # Pre-allocate numpy array for storing max activations
         all_seqs_max_act = np.zeros((sae_dim, len(df)))
 
-        # Use torch.no_grad() context for the entire inference loop
-        with torch.no_grad():
-            for seq_idx, row in tqdm(
-                enumerate(df.iter_rows(named=True)),
-                total=len(df),
-                desc="Running inference over all seqs (Step 1/3)",
-            ):
-                seq = row["Sequence"]
-                # Get ESM activations and immediately detach from computation graph
-                esm_layer_acts = get_esm_layer_acts(seq, tokenizer, plm_model, plm_layer)
-                
-                # Process activations in chunks if sequence is too long
-                sae_acts = sae_model.get_acts(esm_layer_acts)[1:-1]
-                
-                # Move to CPU and convert to numpy immediately
-                sae_acts_cpu = sae_acts.cpu().numpy()
-                all_seqs_max_act[:, seq_idx] = np.max(sae_acts_cpu, axis=0)
-                
-                # Clear CUDA cache periodically
-                if seq_idx % 100 == 0:
-                    torch.cuda.empty_cache()
+        for seq_idx, row in tqdm(
+            enumerate(df.iter_rows(named=True)),
+            total=len(df),
+            desc="Running inference over all seqs (Step 1/3)",
+        ):
+            seq = row["Sequence"]
+            # Get ESM activations and immediately detach from computation graph
+            esm_layer_acts = get_esm_layer_acts(seq, tokenizer, plm_model, plm_layer)
+
+            # Process activations in chunks if sequence is too long
+            sae_acts = sae_model.get_acts(esm_layer_acts)[1:-1]
+
+            # Move to CPU and convert to numpy immediately
+            sae_acts_cpu = sae_acts.cpu().numpy()
+            all_seqs_max_act[:, seq_idx] = np.max(sae_acts_cpu, axis=0)
+
+            # Clear CUDA cache periodically
+            if seq_idx % 100 == 0:
+                torch.cuda.empty_cache()
 
         # Save intermediate results
         with open(os.path.join(OUTPUT_ROOT_DIR, "all_seqs_max_act.npy"), "wb") as f:
@@ -154,63 +149,50 @@ def make_viz_files(checkpoint_files: list[str], sequences_file: str):
                         df, q_indices, top_n=10
                     )
 
-        # Process final visualization files with memory management
-        with torch.no_grad():
-            for dim in tqdm(range(sae_dim), desc="Writing visualization files (Step 3/3)"):
-                viz_file = {"quartiles": {}}
-                if "freq_activate_among_all_seqs" in hidden_dim_to_seqs[dim]:
-                    viz_file["freq_activate_among_all_seqs"] = hidden_dim_to_seqs[dim][
-                        "freq_activate_among_all_seqs"
+        for dim in tqdm(range(sae_dim), desc="Writing visualization files (Step 3/3)"):
+            viz_file = {"quartiles": {}}
+            if "freq_activate_among_all_seqs" in hidden_dim_to_seqs[dim]:
+                viz_file["freq_activate_among_all_seqs"] = hidden_dim_to_seqs[dim][
+                    "freq_activate_among_all_seqs"
+                ]
+            for quartile in quartile_names:
+                if quartile not in hidden_dim_to_seqs[dim]:
+                    continue
+                quartile_examples = {
+                    "examples": [],
+                    "n_seqs": hidden_dim_to_seqs[dim][quartile]["n_seqs"],
+                }
+                if has_interpro:
+                    quartile_examples["interpro"] = hidden_dim_to_seqs[dim][quartile][
+                        "interpro"
                     ]
-                for quartile in quartile_names:
-                    if quartile not in hidden_dim_to_seqs[dim]:
-                        continue
-                    quartile_examples = {
-                        "examples": [],
-                        "n_seqs": hidden_dim_to_seqs[dim][quartile]["n_seqs"],
+                quartile_indices = hidden_dim_to_seqs[dim][quartile]["indices"]
+
+                for seq_idx in quartile_indices:
+                    seq_idx = int(seq_idx)
+                    seq = df[seq_idx]["Sequence"].item()
+                    esm_layer_acts = get_esm_layer_acts(
+                        seq, tokenizer, plm_model, plm_layer
+                    )
+                    sae_acts = sae_model.get_acts(esm_layer_acts)[1:-1].cpu().numpy()
+                    dim_acts = sae_acts[:, dim]
+                    uniprot_id = df[seq_idx]["Entry"].item()[:-1]
+                    alphafolddb_id = df[seq_idx]["AlphaFoldDB"].item().split(";")[0]
+                    protein_name = df[seq_idx]["Protein names"].item()
+
+                    examples = {
+                        "sae_acts": [round(float(act), 1) for act in dim_acts],
+                        "sequence": seq,
+                        "alphafold_id": alphafolddb_id,
+                        "uniprot_id": uniprot_id,
+                        "name": protein_name,
                     }
-                    if has_interpro:
-                        quartile_examples["interpro"] = hidden_dim_to_seqs[dim][quartile][
-                            "interpro"
-                        ]
-                    quartile_indices = hidden_dim_to_seqs[dim][quartile]["indices"]
-                    
-                    for seq_idx in quartile_indices:
-                        seq_idx = int(seq_idx)
-                        seq = df[seq_idx]["Sequence"].item()
-                        esm_layer_acts = get_esm_layer_acts(
-                            seq, tokenizer, plm_model, plm_layer
-                        )
-                        sae_acts = (
-                            sae_model.get_acts(esm_layer_acts)[1:-1]
-                            .cpu()
-                            .numpy()
-                        )
-                        dim_acts = sae_acts[:, dim]
-                        uniprot_id = df[seq_idx]["Entry"].item()[:-1]
-                        alphafolddb_id = df[seq_idx]["AlphaFoldDB"].item().split(";")[0]
-                        protein_name = df[seq_idx]["Protein names"].item()
+                    quartile_examples["examples"].append(examples)
 
-                        examples = {
-                            "sae_acts": [round(float(act), 1) for act in dim_acts],
-                            "sequence": seq,
-                            "alphafold_id": alphafolddb_id,
-                            "uniprot_id": uniprot_id,
-                            "name": protein_name,
-                        }
-                        quartile_examples["examples"].append(examples)
-                        
-                        # Clear CUDA cache periodically
-                        if len(quartile_examples["examples"]) % 10 == 0:
-                            torch.cuda.empty_cache()
-                            
-                    viz_file["quartiles"][quartile] = quartile_examples
+                viz_file["quartiles"][quartile] = quartile_examples
 
-                with open(os.path.join(OUTPUT_ROOT_DIR, f"{dim}.json"), "w") as f:
-                    json.dump(viz_file, f)
-
-        # Final cleanup
-        torch.cuda.empty_cache()
+            with open(os.path.join(OUTPUT_ROOT_DIR, f"{dim}.json"), "w") as f:
+                json.dump(viz_file, f)
 
 
 def get_top_interpro(original_df, indices, top_n=5):
