@@ -60,9 +60,14 @@ export const SAEProvider = ({ children }: { children: React.ReactNode }) => {
           setSelectedFeature(feature);
           if (feature !== undefined) {
             const seqMatch = path.match(/\?seq=([^&]+)/);
+            const pdbMatch = path.match(/\?pdb=([^&]+)/);
             const seq = seqMatch ? seqMatch[1] : "";
-            const seqParam = seq ? `?seq=${seq}` : "";
-            navigate(`/sae-viz/${selectedModel}/${feature}${seqParam}`);
+            const pdb = pdbMatch ? pdbMatch[1] : "";
+            const queryParams = [];
+            if (seq) queryParams.push(`seq=${seq}`);
+            if (pdb) queryParams.push(`pdb=${pdb}`);
+            const queryString = queryParams.length ? `?${queryParams.join("&")}` : "";
+            navigate(`/sae-viz/${selectedModel}/${feature}${queryString}`);
           }
         },
         SAEConfig: SAE_CONFIGS[selectedModel],

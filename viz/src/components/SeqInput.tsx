@@ -1,25 +1,22 @@
 import { useState, useEffect } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { isProteinSequence, isPDBID, getPDBSequence } from "@/utils";
+import { isProteinSequence, isPDBID, getPDBSequence, ProteinSequence, PDBID } from "@/utils";
 
-// TODO(liam): We should come up with a better way to handle the input
-// that can either be a sequence or a PDB ID, maybe with some union type.
-// Currently both are stored as strings and some differential logic in
-// display components queue off of `isPDBID` checks.
+export type ValidSeqInput = ProteinSequence | PDBID;
 
 export default function SeqInput({
-  sequence,
-  setSequence,
+  input,
+  setInput,
   onSubmit,
   loading,
   buttonText,
   exampleSeqs,
   onClear,
 }: {
-  sequence: string;
-  setSequence: (sequence: string) => void;
-  onSubmit: (sequence: string) => void;
+  input: string;
+  setInput: (input: string) => void;
+  onSubmit: (input: ValidSeqInput) => void;
   loading: boolean;
   buttonText: string;
   exampleSeqs?: { [key: string]: string };
@@ -27,35 +24,26 @@ export default function SeqInput({
 }) {
   const [error, setError] = useState<string | null>(null);
 
-  const validateInput = async (input: string): Promise<boolean> => {
+  useEffect(() => {
+    setError(null);
+  }, [input]);
+
+  const handleSubmit = async () => {
     if (isProteinSequence(input)) {
-      return true;
-    }
-    if (isPDBID(input)) {
+      onSubmit(input);
+    } else if (isPDBID(input)) {
       try {
         await getPDBSequence(input);
-        return true;
+        onSubmit(input);
       } catch (e) {
         if (e instanceof Error) {
           setError(e.message);
         } else {
           setError("An unknown error occurred");
         }
-        return false;
       }
-    }
-    setError("Please enter either a valid protein sequence or a PDB ID");
-    return false;
-  };
-
-  useEffect(() => {
-    setError(null);
-  }, [sequence]);
-
-  const handleSubmit = async () => {
-    // If PBD ID, validate by fetching sequence
-    if (await validateInput(sequence)) {
-      onSubmit(sequence);
+    } else {
+      setError("Please enter either a valid protein sequence or a PDB ID");
     }
   };
 
@@ -63,8 +51,8 @@ export default function SeqInput({
     <div className="flex flex-col gap-4 p-0.5">
       <Textarea
         placeholder="Enter protein sequence or PDB ID..."
-        value={sequence}
-        onChange={(e) => setSequence(e.target.value.toUpperCase().replace(/[\r\n]+/g, ""))}
+        value={input}
+        onChange={(e) => setInput(e.target.value.toUpperCase().replace(/[\r\n]+/g, ""))}
         className={`w-full font-mono min-h-[100px] text-sm sm:text-sm md:text-sm lg:text-sm text-base ${
           error ? "border-red-500" : ""
         }`}
@@ -89,7 +77,7 @@ export default function SeqInput({
         <Button
           onClick={handleSubmit}
           className={`${onClear ? "w-full sm:w-32" : "w-full"}`}
-          disabled={loading || !sequence || !!error}
+          disabled={loading || !input || !!error}
         >
           {loading ? "Loading..." : buttonText}
         </Button>
@@ -98,7 +86,7 @@ export default function SeqInput({
             variant="outline"
             onClick={onClear}
             className="w-full sm:w-32"
-            disabled={loading || !sequence}
+            disabled={loading || !input}
           >
             Clear
           </Button>

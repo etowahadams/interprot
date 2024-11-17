@@ -17,21 +17,30 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getSAEAllDimsActivations } from "@/runpod.ts";
-import SeqInput from "./SeqInput";
+import SeqInput, { ValidSeqInput } from "./SeqInput";
 import { EXAMPLE_SEQS_FOR_SEARCH } from "./ui/ExampleSeqsForSearch";
 import { Input } from "@/components/ui/input";
-import { isPDBID, getPDBSequence } from "@/utils";
+import { isPDBID, isProteinSequence, getPDBSequence, ProteinSequence } from "@/utils";
 
 export default function CustomSeqSearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [sequence, setSequence] = useState(searchParams.get("seq") || "");
+  const [input, setInput] = useState<string>("");
   const [searchResults, setSearchResults] = useState<Array<{ dim: number; sae_acts: number[] }>>(
     []
   );
   const [isLoading, setIsLoading] = useState(false);
-  const submittedSequence = useRef(searchParams.get("seq") || "");
-  const pdbId = useRef<string | undefined>(undefined);
-  const hasSubmittedSequence = submittedSequence.current !== "";
+  const submittedInputRef = useRef<ValidSeqInput | undefined>(undefined);
+  const hasSubmittedInput = submittedInputRef.current !== undefined;
+  const submittedSeqRef = useRef<ProteinSequence | undefined>(undefined);
+
+  // Somewhat hacky way to enable URL <-> state syncing (there's probably a better way):
+  // - If URL changes (e.g. user navigates to a new shared link), set this to "url"
+  //   and set state to the URL
+  // - If the state changes (e.g. user submits a new sequence), set this to "state"
+  //   and set the URL
+  // Keeping track of this source of update makes it easier in useEffect to distinguish
+  // which case we're in and avoid circular updates.
+  const lastInputUpdateSource = useRef<"url" | "state" | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState("max");
@@ -66,16 +75,23 @@ export default function CustomSeqSearchPage() {
   };
 
   const handleSearch = useCallback(
-    async (sequence: string) => {
+    async (submittedInput: ValidSeqInput) => {
       setIsLoading(true);
-      setSearchParams({ seq: sequence });
+      lastInputUpdateSource.current = "state";
+      submittedInputRef.current = submittedInput;
+      setInput(submittedInput); // This is needed when user clicks one of the examples
 
-      if (isPDBID(sequence)) {
-        pdbId.current = sequence;
-        sequence = await getPDBSequence(sequence);
+      let seq: ProteinSequence;
+      if (isPDBID(submittedInput)) {
+        seq = await getPDBSequence(submittedInput);
+        setSearchParams({ pdb: submittedInput });
+      } else {
+        seq = submittedInput;
+        setSearchParams({ seq: submittedInput });
       }
-      submittedSequence.current = sequence;
-      setSearchResults(await getSAEAllDimsActivations({ sequence }));
+
+      submittedSeqRef.current = seq;
+      setSearchResults(await getSAEAllDimsActivations({ sequence: seq }));
       setIsLoading(false);
 
       setStartPos(undefined);
@@ -85,38 +101,43 @@ export default function CustomSeqSearchPage() {
   );
 
   useEffect(() => {
-    const urlSequence = searchParams.get("seq");
-    if (urlSequence) {
-      setSequence(urlSequence);
-      submittedSequence.current = urlSequence;
-      handleSearch(urlSequence);
-    } else {
-      setSearchResults([]);
-      setSequence("");
-      submittedSequence.current = "";
+    const urlInput = searchParams.get("pdb") || searchParams.get("seq");
+
+    // If the last update was from the URL (e.g. user navigated to a new link), submit the sequence
+    // and update the state
+    if (lastInputUpdateSource.current !== "state") {
+      lastInputUpdateSource.current = "url";
+      if (urlInput && (isPDBID(urlInput) || isProteinSequence(urlInput))) {
+        setInput(urlInput);
+        submittedInputRef.current = urlInput;
+        handleSearch(urlInput);
+      } else {
+        setSearchResults([]);
+        setInput("");
+        submittedInputRef.current = undefined;
+      }
     }
+    lastInputUpdateSource.current = null;
   }, [searchParams, handleSearch]);
 
   return (
     <main
       className={`min-h-screen w-full overflow-x-hidden ${
-        hasSubmittedSequence ? "" : "flex items-center justify-center"
+        hasSubmittedInput ? "" : "flex items-center justify-center"
       }`}
     >
-      <div className={`${hasSubmittedSequence ? "w-full px-4" : "w-full max-w-2xl"} mt-16 sm:mt-0`}>
-        <h1
-          className={`text-4xl text-left sm:text-center ${hasSubmittedSequence ? "mb-6" : "mb-8"}`}
-        >
+      <div className={`${hasSubmittedInput ? "w-full px-4" : "w-full max-w-2xl"} mt-16 sm:mt-0`}>
+        <h1 className={`text-4xl text-left sm:text-center ${hasSubmittedInput ? "mb-6" : "mb-8"}`}>
           Search SAE features
         </h1>
-        <div className={`${hasSubmittedSequence ? "w-full" : ""} flex flex-col gap-4`}>
+        <div className={`${hasSubmittedInput ? "w-full" : ""} flex flex-col gap-4`}>
           <SeqInput
-            sequence={sequence}
-            setSequence={setSequence}
+            input={input}
+            setInput={setInput}
             onSubmit={handleSearch}
             loading={isLoading}
             buttonText="Search"
-            exampleSeqs={!hasSubmittedSequence ? EXAMPLE_SEQS_FOR_SEARCH : undefined}
+            exampleSeqs={!hasSubmittedInput ? EXAMPLE_SEQS_FOR_SEARCH : undefined}
           />
         </div>
 
@@ -136,7 +157,7 @@ export default function CustomSeqSearchPage() {
                         className="w-20 text-sm placeholder:text-sm"
                         placeholder="start"
                         min={1}
-                        max={sequence.length}
+                        max={submittedSeqRef.current?.length}
                         value={startPos || ""}
                         onChange={(e) => {
                           const val = e.target.value ? parseInt(e.target.value) : undefined;
@@ -150,7 +171,7 @@ export default function CustomSeqSearchPage() {
                         className="w-20 text-sm placeholder:text-sm"
                         placeholder="end"
                         min={1}
-                        max={sequence.length}
+                        max={submittedSeqRef.current?.length}
                         value={endPos || ""}
                         onChange={(e) => {
                           const val = e.target.value ? parseInt(e.target.value) : undefined;
@@ -225,8 +246,12 @@ export default function CustomSeqSearchPage() {
                   <SAEFeatureCard
                     key={result.dim}
                     dim={result.dim}
-                    sequence={submittedSequence.current}
-                    pdbId={pdbId.current}
+                    sequence={submittedSeqRef.current!}
+                    pdbId={
+                      submittedInputRef.current && isPDBID(submittedInputRef.current)
+                        ? submittedInputRef.current
+                        : undefined
+                    }
                     sae_acts={result.sae_acts}
                   />
                 ))}

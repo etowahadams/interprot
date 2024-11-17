@@ -2,26 +2,27 @@ import { useContext } from "react";
 import { Card, CardContent, CardTitle, CardHeader, CardDescription } from "@/components/ui/card";
 import { SAEContext } from "../SAEContext";
 import FullSeqViewer from "./FullSeqViewer";
+import { ProteinSequence } from "@/utils";
 
 export default function SAEFeatureCard({
   dim,
   sequence,
   sae_acts,
-  pdbId,
 }: {
   dim: number;
-  sequence: string;
+  sequence: ProteinSequence;
   sae_acts: Array<number>;
   pdbId?: string;
 }) {
-  const { selectedModel, SAEConfig } = useContext(SAEContext);
+  const { SAEConfig, setSelectedFeature } = useContext(SAEContext);
   const desc = SAEConfig.curated?.find((f) => f.dim === dim)?.desc;
+
   return (
     <Card
       key={dim}
       className="cursor-pointer"
       onClick={() => {
-        window.open(`#/sae-viz/${selectedModel}/${dim}?seq=${pdbId || sequence}`);
+        setSelectedFeature(dim);
       }}
     >
       <CardHeader>

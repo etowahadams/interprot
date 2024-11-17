@@ -4,23 +4,22 @@ import { PluginContext } from "molstar/lib/mol-plugin/context";
 import { CustomElementProperty } from "molstar/lib/mol-model-props/common/custom-element-property";
 import { Model, ElementIndex } from "molstar/lib/mol-model/structure";
 import { Color } from "molstar/lib/mol-util/color";
-import { redColorMapRGB } from "@/utils.ts";
+import { isPDBID, redColorMapRGB } from "@/utils.ts";
 import proteinEmoji from "../protein.png";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { StructureCache } from "@/utils";
+import { ValidSeqInput } from "./SeqInput";
 
 interface CustomStructureViewerProps {
   viewerId: string;
-  seq: string;
-  pdbId?: string;
+  input: ValidSeqInput;
   activations: number[];
   onLoad?: () => void;
 }
 
 const CustomStructureViewer = ({
   viewerId,
-  seq,
-  pdbId,
+  input,
   activations,
   onLoad,
 }: CustomStructureViewerProps) => {
@@ -62,9 +61,9 @@ const CustomStructureViewer = ({
   };
 
   useEffect(() => {
-    const getStructure = async (sequence: string) => {
-      if (pdbId) {
-        const url = `https://files.rcsb.org/download/${pdbId.toLowerCase()}.pdb`;
+    const getStructure = async (input: ValidSeqInput) => {
+      if (isPDBID(input)) {
+        const url = `https://files.rcsb.org/download/${input.toLowerCase()}.pdb`;
         const response = await fetch(url);
         if (!response.ok) {
           throw new Error(`Failed to fetch PDB structure: ${response.status}`);
@@ -78,7 +77,7 @@ const CustomStructureViewer = ({
         headers: {
           "Content-Type": "text/plain",
         },
-        body: sequence,
+        body: input,
       });
 
       if (!response.ok) {
@@ -166,8 +165,8 @@ const CustomStructureViewer = ({
     const renderStructure = async () => {
       setIsLoading(true);
       try {
-        const pdbData = StructureCache[seq] || (await getStructure(seq));
-        StructureCache[seq] = pdbData;
+        const pdbData = StructureCache[input] || (await getStructure(input));
+        StructureCache[input] = pdbData;
         renderViewer(pdbData);
       } catch (error) {
         console.error("Error folding sequence:", error);
@@ -175,11 +174,11 @@ const CustomStructureViewer = ({
       }
     };
 
-    if (!seq || !activations || activations.length === 0) {
+    if (!input || !activations || activations.length === 0) {
       onLoad?.();
       return;
     }
-    if (seq.length > 400) {
+    if (input.length > 400) {
       setWarning(
         "No structure generated. We are folding with the ESMFold API which has a limit of 400 residues. If you'd like to see a structure for your sequence, try a shorter sequence."
       );
@@ -197,9 +196,9 @@ const CustomStructureViewer = ({
         pluginRef.current = null;
       }
     };
-  }, [seq, activations, onLoad, viewerId]);
+  }, [input, activations, onLoad, viewerId]);
 
-  if (!seq || activations.length === 0) return null;
+  if (!input || activations.length === 0) return null;
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">

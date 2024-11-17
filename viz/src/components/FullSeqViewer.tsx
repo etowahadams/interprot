@@ -1,10 +1,10 @@
 import React, { useMemo, useState } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { redColorMapHex } from "@/utils.ts";
+import { ProteinSequence, redColorMapHex } from "@/utils.ts";
 import { Copy, Check } from "lucide-react";
 
 interface FullSeqViewerProps {
-  sequence: string;
+  sequence: ProteinSequence;
   activations: number[];
   showCopy?: boolean;
 }

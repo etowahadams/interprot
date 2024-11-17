@@ -71,17 +71,22 @@ export function sequenceToTokens(sequence: string): Array<number> {
 // Cache for sequence -> structure data in PDB format
 export const StructureCache: Record<string, string> = {};
 
-export const isProteinSequence = (sequence: string): boolean => {
+export type ProteinSequence = string & { readonly __brand: unique symbol };
+
+export const isProteinSequence = (sequence: string): sequence is ProteinSequence => {
   const validAminoAcids = /^[ACDEFGHIKLMNPQRSTVWYBUXZ]+$/i;
   return validAminoAcids.test(sequence.trim());
 };
 
-export const isPDBID = (input: string): boolean => {
+// A special string type requiring passing the isPDBID type guard
+export type PDBID = string & { readonly __brand: unique symbol };
+
+export const isPDBID = (input: string): input is PDBID => {
   const pdbPattern = /^[0-9A-Z]{4}$/i;
   return pdbPattern.test(input.trim());
 };
 
-export const getPDBSequence = async (pdbId: string): Promise<string> => {
+export const getPDBSequence = async (pdbId: PDBID): Promise<ProteinSequence> => {
   const pdbResponse = await fetch(`https://www.rcsb.org/fasta/entry/${pdbId}/display`);
 
   if (!pdbResponse.ok) {
@@ -93,7 +98,6 @@ export const getPDBSequence = async (pdbId: string): Promise<string> => {
     throw new Error("Invalid PDB ID");
   }
   const sequences = fastaText.split(">").filter(Boolean);
-  if (sequences.length === 0) return "";
   const sequenceLines = sequences[0].split("\n");
-  return sequenceLines.slice(1).join("").trim();
+  return sequenceLines.slice(1).join("").trim() as ProteinSequence;
 };

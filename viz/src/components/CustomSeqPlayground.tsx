@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { isPDBID, getPDBSequence } from "@/utils.ts";
+import { isPDBID, isProteinSequence, getPDBSequence, ProteinSequence } from "@/utils.ts";
 import CustomStructureViewer from "./CustomStructureViewer";
 import { getSAEDimActivations, getSteeredSequence } from "@/runpod.ts";
-import SeqInput from "./SeqInput";
+import SeqInput, { ValidSeqInput } from "./SeqInput";
 import { useSearchParams } from "react-router-dom";
 import FullSeqViewer from "./FullSeqViewer";
 
@@ -20,7 +20,7 @@ enum PlaygroundState {
 
 const initialState = {
   customSeqActivations: [] as number[],
-  customSeq: "",
+  customSeqInput: "",
   playgroundState: PlaygroundState.IDLE,
   steeredSeq: "",
   steerMultiplier: 1,
@@ -31,58 +31,91 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
   const [customSeqActivations, setCustomSeqActivations] = useState<number[]>(
     initialState.customSeqActivations
   );
-  const [customSeq, setCustomSeq] = useState<string>(initialState.customSeq);
+  const [customSeqInput, setCustomSeqInput] = useState<string>(initialState.customSeqInput);
+  const submittedInputRef = useRef<ValidSeqInput | undefined>(undefined);
+
   const [playgroundState, setViewerState] = useState<PlaygroundState>(initialState.playgroundState);
   const [steeredSeq, setSteeredSeq] = useState<string>(initialState.steeredSeq);
   const [steerMultiplier, setSteerMultiplier] = useState<number>(initialState.steerMultiplier);
   const [steeredActivations, setSteeredActivations] = useState<number[]>(
     initialState.steeredActivations
   );
-  const submittedSeqRef = useRef<string>("");
-  const pdbIdRef = useRef<string | undefined>(undefined);
+
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Reset all state when feature changes
+  // Somewhat hacky way to enable URL <-> state syncing (there's probably a better way):
+  // - If URL changes (e.g. user navigates to a new shared link), set this to "url"
+  //   and set state to the URL
+  // - If the state changes (e.g. user submits a new sequence), set this to "state"
+  //   and set the URL
+  // Keeping track of this source of update makes it easier in useEffect to distinguish
+  // which case we're in and avoid circular updates.
+  const lastInputUpdateSource = useRef<"url" | "state" | null>(null);
+
+  const handleSubmit = useCallback(
+    async (submittedInput: ValidSeqInput) => {
+      lastInputUpdateSource.current = "state";
+      setViewerState(PlaygroundState.LOADING_SAE_ACTIVATIONS);
+
+      // Reset some states related to downstream actions
+      setCustomSeqActivations(initialState.customSeqActivations);
+      setSteeredSeq(initialState.steeredSeq);
+      setSteerMultiplier(initialState.steerMultiplier);
+      setSteeredActivations(initialState.steeredActivations);
+
+      submittedInputRef.current = submittedInput;
+      if (isPDBID(submittedInput)) {
+        const pdbSequence = await getPDBSequence(submittedInput);
+        const saeActivations = await getSAEDimActivations({
+          sequence: pdbSequence,
+          dim: feature,
+        });
+        setCustomSeqActivations(saeActivations);
+        setSearchParams({ pdb: submittedInput });
+      } else {
+        const saeActivations = await getSAEDimActivations({
+          sequence: submittedInput,
+          dim: feature,
+        });
+        setCustomSeqActivations(saeActivations);
+        setSearchParams({ seq: submittedInput });
+      }
+    },
+    [setSearchParams, feature]
+  );
+
+  // Reset some states when the user navigates to a new feature
   useEffect(() => {
     setCustomSeqActivations(initialState.customSeqActivations);
-    setCustomSeq(searchParams.get("seq") || initialState.customSeq);
     setViewerState(initialState.playgroundState);
     setSteeredSeq(initialState.steeredSeq);
     setSteerMultiplier(initialState.steerMultiplier);
     setSteeredActivations(initialState.steeredActivations);
-  }, [feature, searchParams]);
 
-  const handleSubmit = useCallback(async () => {
-    setViewerState(PlaygroundState.LOADING_SAE_ACTIVATIONS);
-
-    // Reset some states related to downstream actions
-    setCustomSeqActivations(initialState.customSeqActivations);
-    setSteeredSeq(initialState.steeredSeq);
-    setSteerMultiplier(initialState.steerMultiplier);
-    setSteeredActivations(initialState.steeredActivations);
-
-    submittedSeqRef.current = customSeq;
-    setSearchParams({ seq: submittedSeqRef.current });
-
-    if (isPDBID(submittedSeqRef.current)) {
-      pdbIdRef.current = submittedSeqRef.current;
-      submittedSeqRef.current = await getPDBSequence(submittedSeqRef.current);
+    if (submittedInputRef.current) {
+      handleSubmit(submittedInputRef.current);
     }
+  }, [feature, handleSubmit]);
 
-    const saeActivations = await getSAEDimActivations({
-      sequence: submittedSeqRef.current,
-      dim: feature,
-    });
-    setCustomSeqActivations(saeActivations);
-  }, [customSeq, setSearchParams, feature]);
-
-  // Automatically submit when seq URL param is present
   useEffect(() => {
+    const urlPdbId = searchParams.get("pdb");
     const urlSeq = searchParams.get("seq");
-    if (urlSeq && customSeq === urlSeq && customSeqActivations.length === 0) {
-      handleSubmit();
+
+    // If the last update was from the URL (e.g. user navigated to a new link), submit the sequence
+    // and update the state
+    if (lastInputUpdateSource.current !== "state") {
+      lastInputUpdateSource.current = "url";
+      if (urlPdbId && isPDBID(urlPdbId) && submittedInputRef.current !== urlPdbId) {
+        setCustomSeqInput(urlPdbId);
+        handleSubmit(urlPdbId);
+      } else if (urlSeq && isProteinSequence(urlSeq) && submittedInputRef.current !== urlSeq) {
+        setCustomSeqInput(urlSeq);
+        handleSubmit(urlSeq);
+      }
     }
-  }, [searchParams, customSeq, customSeqActivations.length, handleSubmit]);
+
+    lastInputUpdateSource.current = null;
+  }, [searchParams, customSeqActivations.length, handleSubmit]);
 
   const handleSteer = async () => {
     setViewerState(PlaygroundState.LOADING_STEERED_SEQUENCE);
@@ -92,7 +125,7 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
     setSteeredSeq(initialState.steeredSeq);
 
     const steeredSeq = await getSteeredSequence({
-      sequence: submittedSeqRef.current,
+      sequence: submittedInputRef.current!, // Steering controls only appear after this ref is set
       dim: feature,
       multiplier: steerMultiplier,
     });
@@ -106,23 +139,26 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
     <div>
       <div className="mt-5">
         <SeqInput
-          sequence={customSeq}
-          setSequence={setCustomSeq}
+          input={customSeqInput}
+          setInput={setCustomSeqInput}
           onSubmit={handleSubmit}
           loading={playgroundState === PlaygroundState.LOADING_SAE_ACTIVATIONS}
           buttonText="Submit"
           onClear={() => {
-            setCustomSeq("");
+            setCustomSeqInput("");
             setSearchParams({});
           }}
         />
       </div>
 
       {/* Once we have SAE activations, display sequence and structure */}
-      {customSeqActivations.length > 0 && (
+      {submittedInputRef.current && customSeqActivations.length > 0 && (
         <>
           <div className="overflow-x-auto my-4">
-            <FullSeqViewer sequence={submittedSeqRef.current} activations={customSeqActivations} />
+            <FullSeqViewer
+              sequence={submittedInputRef.current as ProteinSequence}
+              activations={customSeqActivations}
+            />
           </div>
           {customSeqActivations.every((act) => act === 0) && (
             <p className="text-sm mb-2">
@@ -132,8 +168,7 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
           )}
           <CustomStructureViewer
             viewerId="custom-viewer"
-            seq={submittedSeqRef.current}
-            pdbId={pdbIdRef.current}
+            input={submittedInputRef.current}
             activations={customSeqActivations}
             onLoad={onStructureLoad}
           />
@@ -228,11 +263,14 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
               {steeredActivations.length > 0 && (
                 <>
                   <div className="overflow-x-auto my-4">
-                    <FullSeqViewer sequence={steeredSeq} activations={steeredActivations} />
+                    <FullSeqViewer
+                      sequence={steeredSeq as ProteinSequence}
+                      activations={steeredActivations}
+                    />
                   </div>
                   <CustomStructureViewer
                     viewerId="steered-viewer"
-                    seq={steeredSeq}
+                    input={steeredSeq as ProteinSequence}
                     activations={steeredActivations}
                     onLoad={onStructureLoad}
                   />
