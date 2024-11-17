@@ -4,52 +4,100 @@ import { PluginContext } from "molstar/lib/mol-plugin/context";
 import { CustomElementProperty } from "molstar/lib/mol-model-props/common/custom-element-property";
 import { Model, ElementIndex } from "molstar/lib/mol-model/structure";
 import { Color } from "molstar/lib/mol-util/color";
+import { redColorMapRGB } from "@/utils.ts";
 import proteinEmoji from "../protein.png";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ProteinSequence, StructureCache, redColorMapRGB } from "@/utils";
+import { StructureCache, PDBID } from "@/utils";
+import { AtomicHierarchy } from "molstar/lib/mol-model/structure/model/properties/atomic/hierarchy";
 
-interface CustomStructureViewerProps {
+interface PDBStructureViewerProps {
   viewerId: string;
-  sequence: ProteinSequence;
-  activations: number[];
+  pdbId: PDBID;
+  chainActivations: { [key: string]: number[] };
   onLoad?: () => void;
 }
 
-const CustomStructureViewer = ({
+const PDBStructureViewer = ({
   viewerId,
-  sequence,
-  activations,
+  pdbId,
+  chainActivations,
   onLoad,
-}: CustomStructureViewerProps) => {
+}: PDBStructureViewerProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [warning, setWarning] = useState("");
   const isMobile = useIsMobile();
 
   const pluginRef = useRef<PluginContext | null>(null);
 
-  const createResidueColorTheme = (activationList: number[], name = "residue-colors") => {
-    const maxValue = Math.max(...activationList);
+  const createResidueColorTheme = (
+    chainActivations: { [key: string]: number[] },
+    name = "residue-colors"
+  ) => {
+    const maxValue = Math.max(...Object.values(chainActivations).flatMap((values) => values));
+
+    // Define chain colors with very faint versions
+    const chainColors = new Map<string, Color>();
+    const defaultChainColors = [
+      Color(0xdce6f1), // faint blue
+      Color(0xfce8d5), // faint orange
+      Color(0xe5f0e5), // faint green
+      Color(0xebe5f0), // faint purple
+      Color(0xeae5e3), // faint brown
+      Color(0xf9ebf5), // faint pink
+      Color(0xebebeb), // faint gray
+    ];
+
     return CustomElementProperty.create({
       label: "Residue Colors",
       name,
       getData(model: Model) {
-        const map = new Map<ElementIndex, number>();
-        const residueIndex = model.atomicHierarchy.residueAtomSegments.index;
+        const map = new Map<ElementIndex, { residueIdx: number; chainId: string }>();
+        const { chains, residueAtomSegments, chainAtomSegments } = model.atomicHierarchy;
+
         for (let i = 0, _i = model.atomicHierarchy.atoms._rowCount; i < _i; i++) {
-          map.set(i as ElementIndex, residueIndex[i]);
+          const residueIdx = residueAtomSegments.index[i];
+          const chainIdx = chainAtomSegments.index[i];
+          const chainId = chains.auth_asym_id.value(chainIdx);
+
+          const chainStartResidue = AtomicHierarchy.chainStartResidueIndex(
+            { residueAtomSegments, chainAtomSegments },
+            chainIdx
+          );
+          const relativeResidueIdx = residueIdx - chainStartResidue;
+
+          map.set(i as ElementIndex, {
+            residueIdx: relativeResidueIdx,
+            chainId,
+          });
         }
         return { value: map };
       },
       coloring: {
-        getColor(e) {
-          const color =
-            maxValue > 0 ? redColorMapRGB(activationList[e], maxValue) : [255, 255, 255];
-          return activationList[e] !== undefined
-            ? Color.fromRgb(color[0], color[1], color[2])
-            : Color.fromRgb(255, 255, 255);
+        getColor(p: { residueIdx: number; chainId: string }) {
+          const { residueIdx, chainId } = p;
+          const activations = chainActivations[chainId];
+          if (!activations) {
+            if (!chainColors.has(chainId)) {
+              const colorIndex = chainColors.size % defaultChainColors.length;
+              chainColors.set(chainId, defaultChainColors[colorIndex]);
+            }
+            return chainColors.get(chainId)!;
+          }
+
+          const activation = activations[residueIdx];
+          if (!activation) {
+            // Same chain-based default coloring
+            if (!chainColors.has(chainId)) {
+              const colorIndex = chainColors.size % defaultChainColors.length;
+              chainColors.set(chainId, defaultChainColors[colorIndex]);
+            }
+            return chainColors.get(chainId)!;
+          }
+
+          const color = maxValue > 0 ? redColorMapRGB(activation, maxValue) : [255, 255, 255];
+          return Color.fromRgb(color[0], color[1], color[2]);
         },
-        defaultColor: Color(0x777777),
+        defaultColor: Color(0xffffff),
       },
       getLabel() {
         return "Activation colors";
@@ -58,20 +106,13 @@ const CustomStructureViewer = ({
   };
 
   useEffect(() => {
-    const getStructure = async (sequence: ProteinSequence) => {
-      const response = await fetch("https://api.esmatlas.com/foldSequence/v1/pdb/", {
-        method: "POST",
-        headers: {
-          "Content-Type": "text/plain",
-        },
-        body: sequence,
-      });
-
+    const getStructure = async (pdbId: PDBID) => {
+      const url = `https://files.rcsb.org/download/${pdbId.toLowerCase()}.pdb`;
+      const response = await fetch(url);
       if (!response.ok) {
-        throw new Error(`Network response was not ok: ${response.status}`);
+        throw new Error(`Failed to fetch PDB structure: ${response.status}`);
       }
-      const pdbData = await response.text();
-      return pdbData;
+      return await response.text();
     };
 
     const renderViewer = async (pdbData: string) => {
@@ -117,7 +158,7 @@ const CustomStructureViewer = ({
       plugin.initViewer(canvas, container as HTMLDivElement);
 
       const themeName = Math.random().toString(36).substring(7);
-      const ResidueColorTheme = createResidueColorTheme(activations, themeName);
+      const ResidueColorTheme = createResidueColorTheme(chainActivations, themeName);
       plugin.representation.structure.themes.colorThemeRegistry.add(
         ResidueColorTheme.colorThemeProvider!
       );
@@ -151,8 +192,8 @@ const CustomStructureViewer = ({
     const renderStructure = async () => {
       setIsLoading(true);
       try {
-        const pdbData = StructureCache[sequence] || (await getStructure(sequence));
-        StructureCache[sequence] = pdbData;
+        const pdbData = StructureCache[pdbId] || (await getStructure(pdbId));
+        StructureCache[pdbId] = pdbData;
         renderViewer(pdbData);
       } catch (error) {
         console.error("Error folding sequence:", error);
@@ -160,14 +201,7 @@ const CustomStructureViewer = ({
       }
     };
 
-    if (!sequence || activations.length === 0) {
-      onLoad?.();
-      return;
-    }
-    if (sequence.length > 400) {
-      setWarning(
-        "No structure generated. We are folding with the ESMFold API which has a limit of 400 residues. If you'd like to see a structure for your sequence, try a shorter sequence."
-      );
+    if (!pdbId || Object.keys(chainActivations).length === 0) {
       onLoad?.();
       return;
     }
@@ -182,7 +216,7 @@ const CustomStructureViewer = ({
         pluginRef.current = null;
       }
     };
-  }, [sequence, activations, onLoad, viewerId]);
+  }, [pdbId, chainActivations, onLoad, viewerId]);
 
   if (isLoading) {
     return (
@@ -198,15 +232,13 @@ const CustomStructureViewer = ({
           id={viewerId}
           style={{
             width: "100%",
-            height: warning || error ? 0 : isMobile ? 300 : 400,
+            height: error ? 0 : isMobile ? 300 : 400,
           }}
         />
       )}
-      <small>Structured generated with ESMFold</small>
-      {warning && <small className="text-yellow-500">{warning}</small>}
       {error && <small className="text-red-500">{error}</small>}
     </div>
   );
 };
 
-export default CustomStructureViewer;
+export default PDBStructureViewer;

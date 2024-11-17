@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { isPDBID, isProteinSequence, getPDBSequence, ProteinSequence } from "@/utils.ts";
+import { isPDBID, isProteinSequence, ProteinSequence, getPDBSeqsData } from "@/utils.ts";
 import CustomStructureViewer from "./CustomStructureViewer";
 import { getSAEDimActivations, getSteeredSequence } from "@/runpod.ts";
 import SeqInput, { ValidSeqInput } from "./SeqInput";
 import { useSearchParams } from "react-router-dom";
-import FullSeqViewer from "./FullSeqViewer";
+import FullSeqsViewer from "./FullSeqsViewer";
+import PDBStructureViewer from "./PDBStructureViewer";
 
 interface CustomSeqPlaygroundProps {
   feature: number;
@@ -19,7 +20,7 @@ enum PlaygroundState {
 }
 
 const initialState = {
-  customSeqActivations: [] as number[],
+  customSeqActivations: {} as { [key: string]: number[] },
   customSeqInput: "",
   playgroundState: PlaygroundState.IDLE,
   steeredSeq: "",
@@ -28,7 +29,9 @@ const initialState = {
 } as const;
 
 const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
-  const [customSeqActivations, setCustomSeqActivations] = useState<number[]>(
+  // [chainIndex][residueIndex] array to account for the fact that PDB structures may have multiple chains.
+  // If user is not inputting a PDB ID, this will always be a 1D array.
+  const [customSeqActivations, setCustomSeqActivations] = useState<{ [key: string]: number[] }>(
     initialState.customSeqActivations
   );
   const [customSeqInput, setCustomSeqInput] = useState<string>(initialState.customSeqInput);
@@ -65,19 +68,25 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
 
       submittedInputRef.current = submittedInput;
       if (isPDBID(submittedInput)) {
-        const pdbSequence = await getPDBSequence(submittedInput);
-        const saeActivations = await getSAEDimActivations({
-          sequence: pdbSequence,
-          dim: feature,
-        });
-        setCustomSeqActivations(saeActivations);
+        // PDB structures may have multiple chains. Get SAE activations for each chain.
+        const pdbSeqsData = await getPDBSeqsData(submittedInput);
+        const activationsPromises = await Promise.all(
+          pdbSeqsData.map(async (pdbSeqData) => [
+            pdbSeqData.chainId,
+            await getSAEDimActivations({
+              sequence: pdbSeqData.sequence,
+              dim: feature,
+            }),
+          ])
+        );
+        setCustomSeqActivations(Object.fromEntries(activationsPromises));
         setSearchParams({ pdb: submittedInput });
       } else {
         const saeActivations = await getSAEDimActivations({
           sequence: submittedInput,
           dim: feature,
         });
-        setCustomSeqActivations(saeActivations);
+        setCustomSeqActivations({ Unknown: saeActivations });
         setSearchParams({ seq: submittedInput });
       }
     },
@@ -152,31 +161,43 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
       </div>
 
       {/* Once we have SAE activations, display sequence and structure */}
-      {submittedInputRef.current && customSeqActivations.length > 0 && (
+      {submittedInputRef.current && Object.keys(customSeqActivations).length > 0 && (
         <>
           <div className="overflow-x-auto my-4">
-            <FullSeqViewer
+            {/* <FullSeqsViewer
               sequence={submittedInputRef.current as ProteinSequence}
-              activations={customSeqActivations}
-            />
+              activations={customSeqActivations.Unknown} // FIXME: handle multiple chains
+            /> */}
           </div>
-          {customSeqActivations.every((act) => act === 0) && (
+          {Object.values(customSeqActivations).every((chainActivations) =>
+            chainActivations.every((activation) => activation === 0)
+          ) && (
             <p className="text-sm mb-2">
               This feature did not activate on your sequence. Try a sequence more similar to the
               ones below.
             </p>
           )}
-          <CustomStructureViewer
-            viewerId="custom-viewer"
-            input={submittedInputRef.current}
-            activations={customSeqActivations}
-            onLoad={onStructureLoad}
-          />
+
+          {isPDBID(submittedInputRef.current) ? (
+            <PDBStructureViewer
+              viewerId="custom-viewer"
+              pdbId={submittedInputRef.current}
+              chainActivations={customSeqActivations}
+              onLoad={onStructureLoad}
+            />
+          ) : (
+            <CustomStructureViewer
+              viewerId="custom-viewer"
+              sequence={submittedInputRef.current}
+              activations={customSeqActivations[0]}
+              onLoad={onStructureLoad}
+            />
+          )}
         </>
       )}
 
       {/* Once we have SAE activations and the first structure has loaded, render the steering controls */}
-      {customSeqActivations.length > 0 &&
+      {Object.keys(customSeqActivations).length > 0 &&
         playgroundState !== PlaygroundState.LOADING_SAE_ACTIVATIONS && (
           <div className="mt-5">
             <h3 className="text-xl font-bold mb-4">Sequence Editing via Steering</h3>
@@ -263,14 +284,14 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
               {steeredActivations.length > 0 && (
                 <>
                   <div className="overflow-x-auto my-4">
-                    <FullSeqViewer
+                    <FullSeqsViewer
                       sequence={steeredSeq as ProteinSequence}
                       activations={steeredActivations}
                     />
                   </div>
                   <CustomStructureViewer
                     viewerId="steered-viewer"
-                    input={steeredSeq as ProteinSequence}
+                    sequence={steeredSeq as ProteinSequence}
                     activations={steeredActivations}
                     onLoad={onStructureLoad}
                   />

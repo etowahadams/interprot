@@ -86,18 +86,86 @@ export const isPDBID = (input: string): input is PDBID => {
   return pdbPattern.test(input.trim());
 };
 
-export const getPDBSequence = async (pdbId: PDBID): Promise<ProteinSequence> => {
-  const pdbResponse = await fetch(`https://www.rcsb.org/fasta/entry/${pdbId}/display`);
+export type PDBSeqData = {
+  name: string;
+  chainId: string;
+  sequence: ProteinSequence;
+};
 
-  if (!pdbResponse.ok) {
-    throw new Error(`Failed to fetch PDB sequence: ${pdbResponse.statusText}`);
+interface PolymerEntity {
+  entity_poly: {
+    pdbx_seq_one_letter_code_can: string;
+  };
+  rcsb_polymer_entity: {
+    pdbx_description: string;
+  };
+  polymer_entity_instances: Array<{
+    rcsb_polymer_entity_instance_container_identifiers: {
+      auth_asym_id: string;
+    };
+  }>;
+}
+
+/**
+ * Fetches the sequences of a given PDB ID. There may be multiple sequences for proteins with
+ * multiple chains.
+ */
+export const getPDBSeqsData = async (pdbId: PDBID): Promise<PDBSeqData[]> => {
+  const query = `
+    query GetFastaSequence($pdbId: String!) {
+      entry(entry_id: $pdbId) {
+        polymer_entities {
+          rcsb_polymer_entity {
+            pdbx_description
+          }
+          entity_poly {
+            pdbx_seq_one_letter_code_can
+            rcsb_sample_sequence_length
+          }
+          polymer_entity_instances {
+            rcsb_polymer_entity_instance_container_identifiers {
+              auth_asym_id
+            }
+          }
+        }
+      }
+    }
+  `;
+
+  const response = await fetch("https://data.rcsb.org/graphql", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      query,
+      variables: { pdbId },
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch PDB sequence: ${response.statusText}`);
   }
 
-  const fastaText = await pdbResponse.text();
-  if (fastaText.includes("No valid PDB IDs were submitted.")) {
-    throw new Error("Invalid PDB ID");
+  const data = await response.json();
+
+  if (!data.data?.entry?.polymer_entities) {
+    throw new Error("Invalid PDB ID or unexpected API response");
   }
-  const sequences = fastaText.split(">").filter(Boolean);
-  const sequenceLines = sequences[0].split("\n");
-  return sequenceLines.slice(1).join("").trim() as ProteinSequence;
+
+  return data.data.entry.polymer_entities.flatMap((entity: PolymerEntity) => {
+    const sequence = entity.entity_poly.pdbx_seq_one_letter_code_can as ProteinSequence;
+    const name = entity.rcsb_polymer_entity.pdbx_description || "";
+
+    return entity.polymer_entity_instances.map(
+      (instance: PolymerEntity["polymer_entity_instances"][0]) => {
+        const chainId = instance.rcsb_polymer_entity_instance_container_identifiers.auth_asym_id;
+        return {
+          name,
+          chainId,
+          sequence,
+        };
+      }
+    );
+  });
 };

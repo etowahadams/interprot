@@ -1,7 +1,7 @@
 import { useContext } from "react";
 import { Card, CardContent, CardTitle, CardHeader, CardDescription } from "@/components/ui/card";
 import { SAEContext } from "../SAEContext";
-import FullSeqViewer from "./FullSeqViewer";
+import FullSeqsViewer from "./FullSeqsViewer";
 import { ProteinSequence } from "@/utils";
 
 export default function SAEFeatureCard({
@@ -31,7 +31,7 @@ export default function SAEFeatureCard({
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
-          <FullSeqViewer sequence={sequence} activations={sae_acts} showCopy={false} />
+          <FullSeqsViewer sequence={sequence} activations={sae_acts} showCopy={false} />
         </div>
       </CardContent>
     </Card>

@@ -45,8 +45,16 @@ export async function postRunpod(
   }
 }
 
+// Cache for sequence+dim -> activations
+const SAEDimActivationsCache: Record<string, number[]> = {};
+
 export async function getSAEDimActivations(input: RunpodSAEDimActivationsInput): Promise<number[]> {
+  const cacheKey = `${input.sequence}-${input.dim}`;
+  if (cacheKey in SAEDimActivationsCache) {
+    return SAEDimActivationsCache[cacheKey];
+  }
   const data = await postRunpod(input, "yk9ehzl3h653vj");
+  SAEDimActivationsCache[cacheKey] = data.tokens_acts_list;
   return data.tokens_acts_list;
 }
 
@@ -54,6 +62,9 @@ export async function getSAEAllDimsActivations(
   input: RunpodSAEAllDimsActivationsInput
 ): Promise<Array<{ dim: number; sae_acts: number[] }>> {
   const data = await postRunpod(input, "yk9ehzl3h653vj");
+  for (const { dim, sae_acts } of data.token_acts_list_by_active_dim) {
+    SAEDimActivationsCache[`${input.sequence}-${dim}`] = sae_acts;
+  }
   return data.token_acts_list_by_active_dim;
 }
 

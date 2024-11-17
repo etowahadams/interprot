@@ -9,7 +9,7 @@ interface FullSeqViewerProps {
   showCopy?: boolean;
 }
 
-const FullSeqViewer: React.FC<FullSeqViewerProps> = ({ sequence, activations, showCopy }) => {
+const FullSeqsViewer: React.FC<FullSeqViewerProps> = ({ sequence, activations, showCopy }) => {
   const [copied, setCopied] = useState(false);
   const maxValue = useMemo(() => Math.max(...activations), [activations]);
 
@@ -63,4 +63,4 @@ const FullSeqViewer: React.FC<FullSeqViewerProps> = ({ sequence, activations, sh
   );
 };
 
-export default FullSeqViewer;
+export default FullSeqsViewer;

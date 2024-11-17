@@ -20,7 +20,7 @@ import { getSAEAllDimsActivations } from "@/runpod.ts";
 import SeqInput, { ValidSeqInput } from "./SeqInput";
 import { EXAMPLE_SEQS_FOR_SEARCH } from "./ui/ExampleSeqsForSearch";
 import { Input } from "@/components/ui/input";
-import { isPDBID, isProteinSequence, getPDBSequence, ProteinSequence } from "@/utils";
+import { isPDBID, isProteinSequence, ProteinSequence, getPDBSeqsData } from "@/utils";
 
 export default function CustomSeqSearchPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -83,7 +83,8 @@ export default function CustomSeqSearchPage() {
 
       let seq: ProteinSequence;
       if (isPDBID(submittedInput)) {
-        seq = await getPDBSequence(submittedInput);
+        const pdbSeqsData = await getPDBSeqsData(submittedInput);
+        seq = pdbSeqsData[0].sequence; // FIXME: handle multiple chains
         setSearchParams({ pdb: submittedInput });
       } else {
         seq = submittedInput;
