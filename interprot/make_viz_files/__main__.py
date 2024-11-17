@@ -10,6 +10,7 @@ import polars as pl
 import torch
 from tqdm import tqdm
 from transformers import AutoTokenizer, EsmModel
+from scipy import sparse
 
 from interprot.sae_model import SparseAutoencoder
 from interprot.utils import get_layer_activations
@@ -80,6 +81,7 @@ def make_viz_files(checkpoint_files: list[str], sequences_file: str):
             )
 
         df = pl.read_parquet(sequences_file)
+        df = df[:2]
         has_interpro = "InterPro" in df.columns
         if has_interpro:
             df = df.with_columns(
@@ -105,8 +107,9 @@ def make_viz_files(checkpoint_files: list[str], sequences_file: str):
             # Move to CPU and convert to numpy immediately
             sae_acts_cpu = sae_acts.cpu().numpy()
             all_seqs_max_act[:, seq_idx] = np.max(sae_acts_cpu, axis=0)
-            sae_acts_int = (sae_acts_cpu * 10).astype(np.int8)
-            all_acts[seq_idx] = sae_acts_int
+            sae_acts_int = (sae_acts_cpu * 10).astype(np.uint8)
+            sparse_acts = sparse.csr_matrix(sae_acts_int)
+            all_acts[seq_idx] = sparse_acts
             # Clear CUDA cache periodically
             if seq_idx % 100 == 0:
                 torch.cuda.empty_cache()
@@ -172,7 +175,7 @@ def make_viz_files(checkpoint_files: list[str], sequences_file: str):
 
                 for seq_idx in quartile_indices:
                     seq_idx = int(seq_idx)
-                    sae_acts = all_acts[seq_idx]
+                    sae_acts = all_acts[seq_idx].toarray()
                     dim_acts = sae_acts[:, dim]
                     uniprot_id = df[seq_idx]["Entry"].item()[:-1]
                     alphafolddb_id = df[seq_idx]["AlphaFoldDB"].item().split(";")[0]
