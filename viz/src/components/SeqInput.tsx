@@ -19,7 +19,7 @@ export default function SeqInput({
   onSubmit: (input: ValidSeqInput) => void;
   loading: boolean;
   buttonText: string;
-  exampleSeqs?: { [key: string]: string };
+  exampleSeqs?: { [key: string]: ProteinSequence };
   onClear?: () => void;
 }) {
   const [error, setError] = useState<string | null>(null);
