@@ -179,10 +179,11 @@ def make_viz_files(checkpoint_files: list[str], sequences_file: str):
                     uniprot_id = df[seq_idx]["Entry"].item()[:-1]
                     alphafolddb_id = df[seq_idx]["AlphaFoldDB"].item().split(";")[0]
                     protein_name = df[seq_idx]["Protein names"].item()
+                    sequence = df[seq_idx]["Sequence"].item()
 
                     examples = {
                         "sae_acts": [round(float(act) / 10, 1) for act in dim_acts],
-                        "sequence": seq,
+                        "sequence": sequence,
                         "alphafold_id": alphafolddb_id,
                         "uniprot_id": uniprot_id,
                         "name": protein_name,
