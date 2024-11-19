@@ -8,34 +8,49 @@ import { SAEContext } from "./SAEContext";
 import { NUM_SEQS_TO_DISPLAY } from "./config";
 import { CONTRIBUTORS } from "./SAEConfigs";
 import SeqsViewer, { SeqWithSAEActs } from "./components/SeqsViewer";
-import { tokensToSequence } from "./utils";
+
+interface VizFile {
+  quartiles: {
+    Q4?: {
+      examples: SeqWithSAEActs[];
+      interpro: {
+        interpro_ids: string[];
+        freq: number[];
+      };
+    };
+  };
+  freq_activate_among_all_seqs: number;
+}
+
+interface FeatureStats {
+  activation_frequency: number;
+  top_families: { id: string; freq: number }[];
+}
 
 const SAEVisualizerPage: React.FC = () => {
   const { selectedFeature, selectedModel, SAEConfig } = useContext(SAEContext);
   const dimToCuratedMap = new Map(SAEConfig?.curated?.map((i) => [i.dim, i]) || []);
+  const [featureStats, setFeatureStats] = useState<FeatureStats>();
 
   const [featureData, setFeatureData] = useState<SeqWithSAEActs[]>([]);
   useEffect(() => {
     const fileURL = `${SAEConfig.baseUrl}${selectedFeature}.json`;
     fetch(fileURL)
       .then((response) => response.json())
-      .then((data) => {
-        // NOTE(liam): important data transformation
-        setFeatureData(
-          data
-            .slice(0, NUM_SEQS_TO_DISPLAY)
-            .map(
-              (seq: {
-                tokens_acts_list: number[];
-                tokens_list: number[];
-                alphafold_id: string;
-              }) => ({
-                sae_acts: seq.tokens_acts_list,
-                sequence: tokensToSequence(seq.tokens_list),
-                alphafold_id: seq.alphafold_id,
-              })
-            )
-        );
+      .then((data: VizFile) => {
+        console.warn(data);
+        if ("Q4" in data["quartiles"]) {
+          const Q4 = data["quartiles"]["Q4"]!;
+          const examples = Q4["examples"];
+          setFeatureData(examples.slice(0, NUM_SEQS_TO_DISPLAY));
+          setFeatureStats({
+            activation_frequency: data["freq_activate_among_all_seqs"],
+            top_families: Q4["interpro"]["interpro_ids"].map((id, i) => ({
+              id,
+              freq: Q4["interpro"]["freq"][i],
+            })),
+          });
+        }
       });
   }, [SAEConfig, selectedFeature]);
 
@@ -68,6 +83,11 @@ const SAEVisualizerPage: React.FC = () => {
     <>
       <main className="text-left max-w-full overflow-x-auto">
         <h1 className="text-3xl font-semibold md:mt-0 mt-16">Feature {selectedFeature}</h1>
+        <div className="mt-3">
+          Activation frequency: {featureStats?.activation_frequency.toFixed(2)} <br />
+          Top InterPro families:{" "}
+          {featureStats?.top_families.slice(5).map((f) => `${f.id} (${f.freq.toFixed(2)})`).join(", ")}
+        </div>
         {dimToCuratedMap.has(selectedFeature) && <div className="mt-3">{desc}</div>}
         {SAEConfig?.supportsCustomSequence && <CustomSeqPlayground feature={selectedFeature} />}
         <SeqsViewer seqs={featureData} />
