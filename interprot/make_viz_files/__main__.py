@@ -181,7 +181,7 @@ def write_viz_file(dim_info, dim, all_acts, df, range_names):
             seq_idx = int(seq_idx)
             sae_acts = all_acts[seq_idx].toarray()
             dim_acts = sae_acts[:, dim]
-            uniprot_id = df[seq_idx]["Entry"].item()[:-1]
+            uniprot_id = df[seq_idx]["Entry"].item()
             alphafolddb_id = df[seq_idx]["AlphaFoldDB"].item().split(";")[0]
             protein_name = df[seq_idx]["Protein names"].item()
             sequence = df[seq_idx]["Sequence"].item()
