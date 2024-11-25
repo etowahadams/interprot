@@ -2,9 +2,11 @@ import esm
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
+import numpy as np
 from functools import cache
 from esm_wrapper import ESM2Model
 from sae_model import SparseAutoencoder, loss_fn
+from validation_metrics import diff_cross_entropy
 
 
 @cache
@@ -92,28 +94,23 @@ class SAELightningModule(pl.LightningModule):
         batch_size = len(seqs)
         with torch.no_grad():
             esm2_model = get_esm_model(self.args.d_model, self.alphabet, self.args.esm2_weight)
-            tokens, esm_layer_acts = esm2_model.get_layer_activations(seqs, self.layer_to_use)
-            recons, auxk, num_dead = self(esm_layer_acts)
-            mse_loss, auxk_loss = loss_fn(esm_layer_acts, recons, auxk)
-            loss = mse_loss + auxk_loss
-            logits = esm2_model.get_sequence(recons, self.layer_to_use)
-            logits = logits.view(-1, logits.size(-1))
-            tokens = tokens.view(-1)
-            correct = (torch.argmax(logits, dim=-1) == tokens).sum().item()
-            total = tokens.size(0)
+
+            diff_CE_all = []
+            val_loss_all = []
+            for seq in seqs:
+                tokens, esm_layer_acts = esm2_model.get_layer_activations(seq, self.layer_to_use)
+                recons, auxk, num_dead = self(esm_layer_acts)
+                mse_loss, auxk_loss = loss_fn(esm_layer_acts, recons, auxk)
+                loss = mse_loss + auxk_loss
+                spliced_logits = esm2_model.get_sequence(recons, self.layer_to_use)
+                orig_logits = esm2_model.get_sequence(esm_layer_acts, self.layer_to_use)
+                diff_CE = diff_cross_entropy(orig_logits, spliced_logits, tokens)
+                diff_CE_all.append(diff_CE)
+                val_loss_all.append(loss)
 
         self.log(
-            "val_celoss",
-            F.cross_entropy(logits, tokens).mean().item(),
-            on_step=True,
-            on_epoch=True,
-            prog_bar=True,
-            logger=True,
-            batch_size=batch_size,
-        )
-        self.log(
-            "val_acc",
-            correct / total,
+            "diff_cross_entropy",
+            np.mean(diff_CE_all),
             on_step=True,
             on_epoch=True,
             prog_bar=True,
@@ -122,7 +119,7 @@ class SAELightningModule(pl.LightningModule):
         )
         self.log(
             "val_loss",
-            loss,
+            np.mean(val_loss_all),
             on_step=True,
             on_epoch=True,
             prog_bar=True,
