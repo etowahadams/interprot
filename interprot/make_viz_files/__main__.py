@@ -123,7 +123,10 @@ def make_viz_files(checkpoint_files: list[str], sequences_file: str):
             range(sae_dim), desc="Finding highest activating seqs (Step 2/3)"
         ):
             dim_maxes = all_seqs_max_act[dim]
-            if np.all(dim_maxes == 0):
+            non_zero_maxes = dim_maxes[dim_maxes > 0]
+
+            if len(non_zero_maxes) == 0:
+                print(f"Skipping dimension {dim} as it has no activations")
                 continue
 
             # Get top Pfam families for sequences with activations greater than 0.75
