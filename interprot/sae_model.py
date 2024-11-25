@@ -8,9 +8,6 @@ import torch.nn as nn
 from torch.nn import functional as F
 from transformers import PreTrainedModel, PreTrainedTokenizer
 
-from .utils import get_layer_activations
-
-
 class SparseAutoencoder(nn.Module):
     def __init__(
         self,
@@ -270,35 +267,3 @@ def loss_fn(
     else:
         auxk_loss = torch.tensor(0.0)
     return mse_loss, auxk_loss
-
-
-def estimate_loss(
-    plm: PreTrainedModel,
-    tokenizer: PreTrainedTokenizer,
-    layer: int,
-    sae_model: SparseAutoencoder,
-    examples_set: pl.DataFrame,
-    sample_size: int = 100,
-):
-    """
-    Estimate the loss of the Sparse Autoencoder using a set of examples.
-
-    Args:
-        sae_model: The Sparse Autoencoder model.
-        examples_set: The examples set to estimate the loss on.
-        sample_size: The number of examples to sample.
-
-    Returns:
-        float: The estimated loss.
-    """
-    samples = examples_set.sample(sample_size)
-    test_losses = []
-    seqs = [row["Sequence"] for row in samples.iter_rows(named=True)]
-    layer_acts = get_layer_activations(tokenizer=tokenizer, plm=plm, seqs=seqs, layer=layer)
-
-    recons = sae_model.forward_val(layer_acts)
-    mse_loss, _ = loss_fn(layer_acts, recons)
-    test_losses.append(mse_loss.item())
-
-    del layer_acts
-    return np.mean(test_losses)
