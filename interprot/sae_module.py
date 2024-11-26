@@ -90,23 +90,25 @@ class SAELightningModule(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        seqs = batch["Sequence"]
-        batch_size = len(seqs)
+        val_seqs = batch["Sequence"]
+        batch_size = len(val_seqs)
         with torch.no_grad():
             esm2_model = get_esm_model(self.args.d_model, self.alphabet, self.args.esm2_weight)
-
             diff_CE_all = []
             val_loss_all = []
-            for seq in seqs:
+            # Running inference one a time is faster than in batch
+            for seq in val_seqs:
                 tokens, esm_layer_acts = esm2_model.get_layer_activations(seq, self.layer_to_use)
+                # Calculate loss
                 recons, auxk, num_dead = self(esm_layer_acts)
                 mse_loss, auxk_loss = loss_fn(esm_layer_acts, recons, auxk)
                 loss = mse_loss + auxk_loss
-                spliced_logits = esm2_model.get_sequence(recons, self.layer_to_use)
-                orig_logits = esm2_model.get_sequence(esm_layer_acts, self.layer_to_use)
-                diff_CE = diff_cross_entropy(orig_logits, spliced_logits, tokens)
-                diff_CE_all.append(diff_CE)
                 val_loss_all.append(loss)
+                # Calculate difference in cross entropy 
+                orig_logits = esm2_model.get_sequence(esm_layer_acts, self.layer_to_use)
+                spliced_logits = esm2_model.get_sequence(recons, self.layer_to_use)
+                diff_CE = diff_cross_entropy(orig_logits, spliced_logits, tokens)
+                diff_CE_all.append(diff_CE)                
 
         self.log(
             "diff_cross_entropy",
