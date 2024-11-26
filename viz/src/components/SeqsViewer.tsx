@@ -10,14 +10,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 export interface SeqWithSAEActs {
   sequence: string;
   sae_acts: Array<number>;
-  alphafold_id?: string;
+  alphafold_id: string;
+  uniprot_id: string;
+  name: string;
 }
 
 interface SeqsViewerProps {
   seqs: SeqWithSAEActs[];
+  title: string;
 }
 
-export default function SeqsViewer({ seqs }: SeqsViewerProps) {
+export default function SeqsViewer({ seqs, title }: SeqsViewerProps) {
   const [alignmentMode, setAlignmentMode] = useState<"first_act" | "max_act" | "msa">("first_act");
   const [alignedSeqs, setAlignedSeqs] = useState<SeqWithSAEActs[]>(seqs);
   const [isAligning, setIsAligning] = useState(false);
@@ -164,7 +167,7 @@ export default function SeqsViewer({ seqs }: SeqsViewerProps) {
   return (
     <>
       <div className="flex items-center gap-4 mt-8 justify-between flex-wrap">
-        <h2 className="text-2xl font-semibold">Top activating sequences</h2>
+        <h2 className="text-2xl font-semibold">{title}</h2>
         <div className="hidden sm:flex items-center gap-4">
           <ToggleGroup
             type="single"
