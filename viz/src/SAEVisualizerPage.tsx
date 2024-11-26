@@ -109,12 +109,11 @@ const SAEVisualizerPage: React.FC = () => {
       <main className="text-left max-w-full overflow-x-auto">
         <div className="flex justify-between items-center mt-3 mb-3">
           <h1 className="text-3xl font-semibold md:mt-0 mt-16">Feature {selectedFeature}</h1>
-          {featureStats && (
+            {featureStats && (
             <div>
-              Activation frequency: {featureStats ? (featureStats.freq_active * 100).toFixed(2) : 0}
-              %
+              Activation frequency: {(featureStats.freq_active * 100).toFixed(2)}%
             </div>
-          )}
+            )}
         </div>
         <div>
           {featureStats && featureStats.top_pfam.length > 0 && (
