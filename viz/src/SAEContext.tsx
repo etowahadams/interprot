@@ -57,6 +57,7 @@ export const SAEProvider = ({ children }: { children: React.ReactNode }) => {
         },
         selectedFeature: selectedFeature,
         setSelectedFeature: (feature: number | undefined) => {
+          console.log("setSelectedFeature", feature);
           setSelectedFeature(feature);
           if (feature !== undefined) {
             const seqMatch = path.match(/\?seq=([^&]+)/);
