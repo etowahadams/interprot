@@ -101,7 +101,6 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
     setSteeredActivations(initialState.steeredActivations);
     setSteeredSeq(initialState.steeredSeq);
 
-    console.log("proteinInput", proteinInput);
     const steeredSeq = await getSteeredSequence({
       sequence: proteinInput,
       dim: feature,
@@ -124,6 +123,7 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
           buttonText="Submit"
           onClear={() => {
             setCustomSeqInput("");
+            setInputProteinActivations(initialState.inputProteinActivations);
             clearUrlInput();
           }}
         />
@@ -165,8 +165,10 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
         </>
       )}
 
-      {/* Once we have SAE activations and the first structure has loaded, render the steering controls */}
-      {Object.keys(inputProteinActivations).length > 0 &&
+      {/* Once we have SAE activations, render the steering controls. Currently not supporting PDB ID inputs 
+          because they may have multiple chains. */}
+      {isProteinSequence(proteinInput) &&
+        Object.keys(inputProteinActivations).length > 0 &&
         playgroundState !== PlaygroundState.LOADING_SAE_ACTIVATIONS && (
           <div className="mt-5">
             <h3 className="text-xl font-bold mb-4">Sequence Editing via Steering</h3>

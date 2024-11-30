@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import SAEFeatureCard from "./SAEFeatureCard";
-import { useSearchParams } from "react-router-dom";
 import {
   Pagination,
   PaginationContent,
@@ -21,26 +20,17 @@ import SeqInput, { ValidSeqInput } from "./SeqInput";
 import { EXAMPLE_SEQS_FOR_SEARCH } from "./ui/ExampleSeqsForSearch";
 import { Input } from "@/components/ui/input";
 import { isPDBID, isProteinSequence, AminoAcidSequence, getPDBChainsData } from "@/utils";
+import { useUrlState } from "@/hooks/useUrlState";
 
 export default function CustomSeqSearchPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const { value: urlInput, setValue: setUrlInput } = useUrlState();
   const [input, setInput] = useState<string>("");
   const [searchResults, setSearchResults] = useState<Array<{ dim: number; sae_acts: number[] }>>(
     []
   );
   const [isLoading, setIsLoading] = useState(false);
-  const submittedInputRef = useRef<ValidSeqInput | undefined>(undefined);
-  const hasSubmittedInput = submittedInputRef.current !== undefined;
+  const hasSubmittedInput = urlInput !== "";
   const submittedSeqRef = useRef<AminoAcidSequence | undefined>(undefined);
-
-  // Somewhat hacky way to enable URL <-> state syncing (there's probably a better way):
-  // - If URL changes (e.g. user navigates to a new shared link), set this to "url"
-  //   and set state to the URL
-  // - If the state changes (e.g. user submits a new sequence), set this to "state"
-  //   and set the URL
-  // Keeping track of this source of update makes it easier in useEffect to distinguish
-  // which case we're in and avoid circular updates.
-  const lastInputUpdateSource = useRef<"url" | "state" | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState("max");
@@ -79,9 +69,7 @@ export default function CustomSeqSearchPage() {
   const handleSearch = useCallback(
     async (submittedInput: ValidSeqInput) => {
       setIsLoading(true);
-      lastInputUpdateSource.current = "state";
-      submittedInputRef.current = submittedInput;
-      setInput(submittedInput); // This is needed when user clicks one of the examples
+      setInput(submittedInput);
 
       let seq: AminoAcidSequence;
       if (isPDBID(submittedInput)) {
@@ -90,10 +78,10 @@ export default function CustomSeqSearchPage() {
           setWarning("PDB entry contains multiple chains. Only the first chain is considered.");
         }
         seq = pdbChainsData[0].sequence;
-        setSearchParams({ pdb: submittedInput });
+        setUrlInput("pdb", submittedInput);
       } else {
         seq = submittedInput;
-        setSearchParams({ seq: submittedInput });
+        setUrlInput("seq", submittedInput);
       }
 
       submittedSeqRef.current = seq;
@@ -103,28 +91,18 @@ export default function CustomSeqSearchPage() {
       setStartPos(undefined);
       setEndPos(undefined);
     },
-    [setSearchParams]
+    [setUrlInput]
   );
 
   useEffect(() => {
-    const urlInput = searchParams.get("pdb") || searchParams.get("seq");
-
-    // If the last update was from the URL (e.g. user navigated to a new link), submit the sequence
-    // and update the state
-    if (lastInputUpdateSource.current !== "state") {
-      lastInputUpdateSource.current = "url";
-      if (urlInput && (isPDBID(urlInput) || isProteinSequence(urlInput))) {
-        setInput(urlInput);
-        submittedInputRef.current = urlInput;
-        handleSearch(urlInput);
-      } else {
-        setSearchResults([]);
-        setInput("");
-        submittedInputRef.current = undefined;
-      }
+    if (urlInput && (isPDBID(urlInput) || isProteinSequence(urlInput))) {
+      setInput(urlInput);
+      handleSearch(urlInput);
+    } else {
+      setSearchResults([]);
+      setInput("");
     }
-    lastInputUpdateSource.current = null;
-  }, [searchParams, handleSearch]);
+  }, [urlInput, handleSearch]);
 
   return (
     <main
