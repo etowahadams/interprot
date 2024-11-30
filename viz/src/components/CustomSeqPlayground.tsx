@@ -49,7 +49,7 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
     initialState.steeredActivations
   );
 
-  const { value: urlInput, setValue: setUrlInput, clear: clearUrlInput } = useUrlState();
+  const { urlInput, setUrlInput, clearUrlInput } = useUrlState();
 
   const handleSubmit = useCallback(
     async (submittedInput: ValidSeqInput) => {

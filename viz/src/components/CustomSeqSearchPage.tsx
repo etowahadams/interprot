@@ -23,7 +23,7 @@ import { isPDBID, isProteinSequence, AminoAcidSequence, getPDBChainsData } from 
 import { useUrlState } from "@/hooks/useUrlState";
 
 export default function CustomSeqSearchPage() {
-  const { value: urlInput, setValue: setUrlInput } = useUrlState();
+  const { urlInput, setUrlInput } = useUrlState();
   const [input, setInput] = useState<string>("");
   const [searchResults, setSearchResults] = useState<Array<{ dim: number; sae_acts: number[] }>>(
     []

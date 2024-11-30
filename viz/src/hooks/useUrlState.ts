@@ -47,8 +47,8 @@ export function useUrlState() {
   }, [setSearchParams]);
 
   return {
-    value: getValue(),
-    setValue,
-    clear,
+    urlInput: getValue(),
+    setUrlInput: setValue,
+    clearUrlInput: clear,
   } as const;
 }
