@@ -22,6 +22,7 @@ parser.add_argument("--auxk", type=int, default=256)
 parser.add_argument("--dead-steps-threshold", type=int, default=2000)
 parser.add_argument("-e", "--max-epochs", type=int, default=4)
 parser.add_argument("-d", "--num-devices", type=int, default=1)
+parser.add_argument("--project-name", type=str, default="interprot")
 
 args = parser.parse_args()
 args.output_dir = f"results_l{args.layer_to_use}_dim{args.d_hidden}_k{args.k}"
@@ -31,7 +32,7 @@ if not os.path.exists(args.output_dir):
 
 sae_name = f"esm2_plm1280_l{args.layer_to_use}_sae{args.d_hidden}_k{args.k}_auxk{args.auxk}"
 wandb_logger = WandbLogger(
-    project="interpretability",
+    project=args.project_name,
     name=sae_name,
     save_dir=os.path.join(args.output_dir, "wandb"),
 )
@@ -43,7 +44,7 @@ checkpoint_callback = ModelCheckpoint(
     dirpath=os.path.join(args.output_dir, "checkpoints"),
     filename=sae_name + "-{step}-{val_loss:.2f}",
     save_top_k=3,
-    monitor="val_loss",
+    monitor="train_loss",
     mode="min",
     save_last=True,
 )
@@ -55,7 +56,7 @@ trainer = pl.Trainer(
     strategy="ddp" if args.num_devices > 1 else "auto",
     logger=wandb_logger,
     log_every_n_steps=10,
-    val_check_interval=2000,
+    val_check_interval=500,
     limit_val_batches=10,
     callbacks=[checkpoint_callback],
     gradient_clip_val=1.0,
