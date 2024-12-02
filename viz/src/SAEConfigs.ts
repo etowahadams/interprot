@@ -24,7 +24,7 @@ export const CONTRIBUTORS: Record<string, string> = {
 export const SAE_CONFIGS: Record<string, SAEConfig> = {
   "SAE4096-L24": {
     baseUrl:
-      "https://raw.githubusercontent.com/liambai/plm-interp-viz-data/refs/heads/main/esm2_plm1280_l24_sae4096_100Kseqs/",
+      "https://raw.githubusercontent.com/liambai/plm-interp-viz-data/refs/heads/main/esm2_plm1280_l24_sae4096_100Kseqs_quantile/",
     numHiddenDims: 4096,
     plmLayer: 24,
     curated: [

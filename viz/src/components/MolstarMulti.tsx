@@ -194,9 +194,17 @@ const MolstarMulti: React.FC<MolstarViewerProps> = ({ proteins }) => {
                       alt={`Protein ${protein.alphafold_id}`}
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
-                      {protein.alphafold_id}
-                    </div>
+                    <a
+                      href={`https://uniprot.org/uniprot/${protein.uniprot_id}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm">
+                        {protein.name.length > 30
+                          ? protein.name.substring(0, 32) + "..."
+                          : protein.name}
+                      </div>
+                    </a>
                   </TooltipTrigger>
                   <TooltipContent>Click to interact with the structure</TooltipContent>
                 </Tooltip>
