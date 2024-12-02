@@ -25,6 +25,7 @@ parser.add_argument("-e", "--max-epochs", type=int, default=1)
 parser.add_argument("-d", "--num-devices", type=int, default=1)
 parser.add_argument("--model-suffix", type=str, default="")
 parser.add_argument("--wandb-project", type=str, default="interprot")
+parser.add_argument("--num-workers", type=int, default=None)
 
 args = parser.parse_args()
 args.output_dir = (
@@ -47,7 +48,7 @@ wandb_logger = WandbLogger(
 model = SAELightningModule(args)
 wandb_logger.watch(model, log="all")
 
-data_module = SequenceDataModule(args.data_dir, args.batch_size)
+data_module = SequenceDataModule(args.data_dir, args.batch_size, args.num_workers)
 checkpoint_callback = ModelCheckpoint(
     dirpath=os.path.join(args.output_dir, "checkpoints"),
     filename=sae_name + "-{step}-{val_loss:.2f}",
