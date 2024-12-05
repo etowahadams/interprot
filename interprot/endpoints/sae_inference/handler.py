@@ -384,7 +384,16 @@ def load_models():
         logger.info(f"Loading SAE model {sae_name}")
         sae_model = SparseAutoencoder(plm_dim, sae_dim).to(device)
         sae_weights = os.path.join(WEIGHTS_DIR, sae_checkpoint)
-        sae_model.load_state_dict(torch.load(sae_weights))
+        # Support different checkpoint formats
+        try:
+            sae_model.load_state_dict(torch.load(sae_weights))
+        except Exception:
+            sae_model.load_state_dict(
+                {
+                    k.replace("sae_model.", ""): v
+                    for k, v in torch.load(sae_weights)["state_dict"].items()
+                }
+            )
         sae_name_to_model[sae_name] = sae_model
 
     logger.info("Models loaded successfully")

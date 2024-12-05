@@ -155,41 +155,47 @@ const SAEVisualizerPage: React.FC = () => {
             </div>
           )}
         </div>
-        {isDeadLatent && (
+        {isDeadLatent ? (
           <div className="mt-3">This is a dead latent. It does not activate on any sequence.</div>
-        )}
-        <div className="mt-3">{dimToCuratedMap.has(selectedFeature) && desc}</div>
-        {SAEConfig?.supportsCustomSequence && (
-          <CustomSeqPlayground feature={selectedFeature} saeName={selectedModel} />
-        )}
-        {isLoading ? (
-          <div className="flex items-center justify-center w-full mt-5">
-            <img src={proteinEmoji} alt="Loading..." className="w-12 h-12 animate-wiggle mb-4" />
-          </div>
         ) : (
           <>
-            {!isLoading && (
+            <div className="mt-3">{dimToCuratedMap.has(selectedFeature) && desc}</div>
+            {SAEConfig?.supportsCustomSequence && (
+              <CustomSeqPlayground feature={selectedFeature} saeName={selectedModel} />
+            )}
+            {isLoading ? (
+              <div className="flex items-center justify-center w-full mt-5">
+                <img
+                  src={proteinEmoji}
+                  alt="Loading..."
+                  className="w-12 h-12 animate-wiggle mb-4"
+                />
+              </div>
+            ) : (
               <>
-                <SeqsViewer seqs={rangeData[rangeNames[0]]} title="Top activating sequences" />
-                <MolstarMulti proteins={rangeData[rangeNames[0]]} />
-
-                <h2 className="text-2xl font-semibold mt-6">Lower activating sequences</h2>
-                <Accordion type="multiple" className="w-full mt-6">
-                  {rangeNames.slice(1).map(
-                    (rangeName) =>
-                      rangeData[rangeName]?.length > 0 && (
-                        <AccordionItem key={rangeName} value={rangeName}>
-                          <AccordionTrigger className="text-lg">
-                            Top sequences in activation range {rangeName}
-                          </AccordionTrigger>
-                          <AccordionContent>
-                            <SeqsViewer seqs={rangeData[rangeName]} />
-                            <MolstarMulti proteins={rangeData[rangeName]} />
-                          </AccordionContent>
-                        </AccordionItem>
-                      )
-                  )}
-                </Accordion>
+                {!isLoading && (
+                  <>
+                    <SeqsViewer seqs={rangeData[rangeNames[0]]} title="Top activating sequences" />
+                    <MolstarMulti proteins={rangeData[rangeNames[0]]} />
+                    <h2 className="text-2xl font-semibold mt-6">Lower activating sequences</h2>
+                    <Accordion type="multiple" className="w-full mt-6">
+                      {rangeNames.slice(1).map(
+                        (rangeName) =>
+                          rangeData[rangeName]?.length > 0 && (
+                            <AccordionItem key={rangeName} value={rangeName}>
+                              <AccordionTrigger className="text-lg">
+                                Top sequences in activation range {rangeName}
+                              </AccordionTrigger>
+                              <AccordionContent>
+                                <SeqsViewer seqs={rangeData[rangeName]} />
+                                <MolstarMulti proteins={rangeData[rangeName]} />
+                              </AccordionContent>
+                            </AccordionItem>
+                          )
+                      )}
+                    </Accordion>
+                  </>
+                )}
               </>
             )}
           </>

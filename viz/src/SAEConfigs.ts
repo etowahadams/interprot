@@ -8,6 +8,7 @@ export type CuratedFeature = {
 
 export type SAEConfig = {
   baseUrl: string;
+  description: string;
   numHiddenDims: number;
   plmLayer: number;
   curated?: CuratedFeature[];
@@ -25,6 +26,8 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
   "SAE4096-L24": {
     baseUrl:
       "https://raw.githubusercontent.com/liambai/plm-interp-viz-data/refs/heads/main/esm2_plm1280_l24_sae4096_100Kseqs/",
+    description:
+      "This SAE was trained on layer 24 of [ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D) using sequences from [UniRef50](https://www.uniprot.org/help/uniref) and has 4096 hidden dimensions. Click on a feature below to visualize its activation pattern.",
     numHiddenDims: 4096,
     plmLayer: 24,
     curated: [
@@ -371,6 +374,16 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
       },
     ],
     defaultDim: 4000,
+    supportsCustomSequence: true,
+  },
+  "SAE4096-L24-ab": {
+    baseUrl:
+      "https://raw.githubusercontent.com/liambai/plm-interp-viz-data/refs/heads/main/esm2_plm1280_l24_sae4096_k128_auxk512_antibody_seqs/",
+    description:
+      "This SAE was trained on layer 24 of [ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D) using antibody sequences from [PLAbDab](https://opig.stats.ox.ac.uk/webapps/plabdab/) and has 4096 hidden dimensions. Click on a feature below to visualize its activation pattern.",
+    numHiddenDims: 4096,
+    plmLayer: 24,
+    defaultDim: 0,
     supportsCustomSequence: true,
   },
 };

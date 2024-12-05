@@ -22,8 +22,8 @@ import { Toggle } from "@/components/ui/toggle";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Dices, Search } from "lucide-react";
-import { SHOW_MODEL_SELECTOR } from "../config";
 import { SAEContext } from "../SAEContext";
+import Markdown from "markdown-to-jsx";
 
 export default function SAESidebar() {
   const { setOpenMobile } = useSidebar();
@@ -54,33 +54,38 @@ export default function SAESidebar() {
           <div className="m-3">
             <HomeNavigator />
           </div>
-          {SHOW_MODEL_SELECTOR && (
-            <Select value={selectedModel} onValueChange={(value) => setSelectedModel(value)}>
-              <SelectTrigger className="mb-3">
-                <SelectValue placeholder="Select SAE Model" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.keys(SAE_CONFIGS).map((model) => (
-                  <SelectItem key={model} value={model}>
-                    {model}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+          <Select
+            value={selectedModel}
+            onValueChange={(value) => {
+              setSelectedModel(value);
+              setSelectedFeature(SAE_CONFIGS[value].defaultDim);
+            }}
+          >
+            <SelectTrigger className="mb-3">
+              <SelectValue placeholder="Select SAE Model" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.keys(SAE_CONFIGS).map((model) => (
+                <SelectItem key={model} value={model}>
+                  {model}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <div className="text-sm text-left px-3 mb-2">
-            <p>
-              This{" "}
-              <a href="https://huggingface.co/liambai/InterProt-ESM2-SAEs" className="underline">
-                SAE
-              </a>{" "}
-              was trained on layer {SAEConfig.plmLayer} of{" "}
-              <a href="https://huggingface.co/facebook/esm2_t33_650M_UR50D" className="underline">
-                ESM2-650M
-              </a>{" "}
-              and has {SAEConfig.numHiddenDims} hidden dimensions. Click on a feature below to
-              visualize its activation pattern.
-            </p>
+            <Markdown
+              options={{
+                overrides: {
+                  a: {
+                    props: {
+                      className: "underline",
+                    },
+                  },
+                },
+              }}
+            >
+              {SAEConfig.description}
+            </Markdown>
           </div>
           <Button
             variant="outline"
