@@ -184,7 +184,8 @@ export type ProteinActivationsData = {
 
 export const constructProteinActivationsDataFromPDBID = async (
   pdbId: PDBID,
-  feature: number
+  feature: number,
+  saeName: string
 ): Promise<ProteinActivationsData> => {
   const seqsData = await getPDBChainsData(pdbId);
   const chains = await Promise.all(
@@ -195,6 +196,7 @@ export const constructProteinActivationsDataFromPDBID = async (
       activations: await getSAEDimActivations({
         sequence: seqData.sequence,
         dim: feature,
+        sae_name: saeName,
       }),
     }))
   );
@@ -203,11 +205,13 @@ export const constructProteinActivationsDataFromPDBID = async (
 
 export const constructProteinActivationsDataFromSequence = async (
   sequence: AminoAcidSequence,
-  feature: number
+  feature: number,
+  saeName: string
 ): Promise<ProteinActivationsData> => {
   const activations = await getSAEDimActivations({
     sequence,
     dim: feature,
+    sae_name: saeName,
   });
   return {
     chains: [{ id: "Unknown", sequence, activations }],

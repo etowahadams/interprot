@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface CustomSeqPlaygroundProps {
   feature: number;
+  saeName: string;
 }
 
 enum PlaygroundState {
@@ -36,7 +37,7 @@ const initialState = {
   steeredActivations: [] as number[],
 } as const;
 
-const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
+const CustomSeqPlayground = ({ feature, saeName }: CustomSeqPlaygroundProps) => {
   const [inputProteinActivations, setInputProteinActivations] = useState<ProteinActivationsData>(
     initialState.inputProteinActivations
   );
@@ -63,16 +64,16 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
       if (isPDBID(submittedInput)) {
         setUrlInput("pdb", submittedInput);
         setInputProteinActivations(
-          await constructProteinActivationsDataFromPDBID(submittedInput, feature)
+          await constructProteinActivationsDataFromPDBID(submittedInput, feature, saeName)
         );
       } else {
         setUrlInput("seq", submittedInput);
         setInputProteinActivations(
-          await constructProteinActivationsDataFromSequence(submittedInput, feature)
+          await constructProteinActivationsDataFromSequence(submittedInput, feature, saeName)
         );
       }
     },
-    [feature, setUrlInput]
+    [feature, setUrlInput, saeName]
   );
 
   // Reset some states when the user navigates to a new feature
@@ -107,7 +108,9 @@ const CustomSeqPlayground = ({ feature }: CustomSeqPlaygroundProps) => {
       multiplier: steerMultiplier,
     });
     setSteeredSeq(steeredSeq);
-    setSteeredActivations(await getSAEDimActivations({ sequence: steeredSeq, dim: feature }));
+    setSteeredActivations(
+      await getSAEDimActivations({ sequence: steeredSeq, dim: feature, sae_name: saeName })
+    );
   };
 
   const onStructureLoad = useCallback(() => setViewerState(PlaygroundState.IDLE), []);

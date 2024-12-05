@@ -22,6 +22,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 WEIGHTS_DIR = "/weights"
+SAE_NAME_TO_CHECKPOINT = {
+    "SAE4096-L24": "esm2_plm1280_l24_sae4096_100Kseqs.pt",
+    "SAE4048-L24-ab": "esm2_plm1280_l24_sae4096_k128_auxk512_antibody_seqs.ckpt",
+}
 
 
 class SparseAutoencoder(nn.Module):
@@ -351,34 +355,40 @@ class ESM2Model(pl.LightningModule):
         return logits
 
 
-# Load your model
-def load_models(sae_checkpoint: str):
-    pattern = r"plm(\d+).*?l(\d+).*?sae(\d+)"
-    matches = re.search(pattern, sae_checkpoint)
-    if matches:
-        plm_dim, _, sae_dim = map(int, matches.groups())
-    else:
-        raise ValueError("Checkpoint file must be named in the format plm<n>_l<n>_sae<n>")
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+def load_models():
+    sae_name_to_model = {}
+    for sae_name, sae_checkpoint in SAE_NAME_TO_CHECKPOINT.items():
+        pattern = r"plm(\d+).*?l(\d+).*?sae(\d+)"
+        matches = re.search(pattern, sae_checkpoint)
+        if matches:
+            plm_dim, _, sae_dim = map(int, matches.groups())
+        else:
+            raise ValueError("Checkpoint file must be named in the format plm<n>_l<n>_sae<n>")
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # Load ESM2 model
-    logger.info(f"Loading ESM2 model with plm_dim={plm_dim}")
-    alphabet = esm.data.Alphabet.from_architecture("ESM-1b")
-    esm2_model = ESM2Model(
-        num_layers=33, embed_dim=plm_dim, attention_heads=20, alphabet=alphabet, token_dropout=False
-    )
-    esm2_weights = os.path.join(WEIGHTS_DIR, "esm2_t33_650M_UR50D.pt")
-    esm2_model.load_esm_ckpt(esm2_weights)
-    esm2_model = esm2_model.to(device)
+        # Load ESM2 model
+        logger.info(f"Loading ESM2 model with plm_dim={plm_dim}")
+        alphabet = esm.data.Alphabet.from_architecture("ESM-1b")
+        esm2_model = ESM2Model(
+            num_layers=33,
+            embed_dim=plm_dim,
+            attention_heads=20,
+            alphabet=alphabet,
+            token_dropout=False,
+        )
+        esm2_weights = os.path.join(WEIGHTS_DIR, "esm2_t33_650M_UR50D.pt")
+        esm2_model.load_esm_ckpt(esm2_weights)
+        esm2_model = esm2_model.to(device)
 
-    # Load SAE model
-    logger.info(f"Loading SAE model with sae_dim={sae_dim}")
-    sae_model = SparseAutoencoder(plm_dim, sae_dim).to(device)
-    sae_weights = os.path.join(WEIGHTS_DIR, sae_checkpoint)
-    sae_model.load_state_dict(torch.load(sae_weights))
+        # Load SAE models
+        logger.info(f"Loading SAE model {sae_name}")
+        sae_model = SparseAutoencoder(plm_dim, sae_dim).to(device)
+        sae_weights = os.path.join(WEIGHTS_DIR, sae_checkpoint)
+        sae_model.load_state_dict(torch.load(sae_weights))
+        sae_name_to_model[sae_name] = sae_model
 
     logger.info("Models loaded successfully")
-    return esm2_model, sae_model
+    return esm2_model, sae_name_to_model
 
 
 def handler(event):
@@ -386,11 +396,13 @@ def handler(event):
     try:
         input_data = event["input"]
         seq = input_data["sequence"]
+        sae_name = input_data["sae_name"]
         dim = input_data.get("dim")
         _, esm_layer_acts = esm2_model.get_layer_activations(seq, 24)
         esm_layer_acts = esm_layer_acts[0].float()
         logger.info(f"esm_layer_acts: {esm_layer_acts.shape}")
 
+        sae_model = sae_name_to_model[sae_name]
         sae_acts = sae_model.get_acts(esm_layer_acts)[1:-1]
         logger.info(f"sae_acts: {sae_acts.shape}")
 
@@ -423,5 +435,5 @@ def handler(event):
         return {"status": "error", "error": str(e)}
 
 
-esm2_model, sae_model = load_models("esm2_plm1280_l24_sae4096_100Kseqs.pt")
+esm2_model, sae_name_to_model = load_models()
 runpod.serverless.start({"handler": handler})

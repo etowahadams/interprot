@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useContext, useState, useEffect, useCallback, useRef } from "react";
 import SAEFeatureCard from "./SAEFeatureCard";
 import {
   Pagination,
@@ -21,8 +21,9 @@ import { EXAMPLE_SEQS_FOR_SEARCH } from "./ui/ExampleSeqsForSearch";
 import { Input } from "@/components/ui/input";
 import { isPDBID, isProteinSequence, AminoAcidSequence, getPDBChainsData } from "@/utils";
 import { useUrlState } from "@/hooks/useUrlState";
-
+import { SAEContext } from "@/SAEContext";
 export default function CustomSeqSearchPage() {
+  const { selectedModel } = useContext(SAEContext);
   const { urlInput, setUrlInput } = useUrlState();
   const [input, setInput] = useState<string>("");
   const [searchResults, setSearchResults] = useState<Array<{ dim: number; sae_acts: number[] }>>(
@@ -85,13 +86,13 @@ export default function CustomSeqSearchPage() {
       }
 
       submittedSeqRef.current = seq;
-      setSearchResults(await getSAEAllDimsActivations({ sequence: seq }));
+      setSearchResults(await getSAEAllDimsActivations({ sequence: seq, sae_name: selectedModel }));
       setIsLoading(false);
 
       setStartPos(undefined);
       setEndPos(undefined);
     },
-    [setUrlInput]
+    [selectedModel, setUrlInput]
   );
 
   useEffect(() => {

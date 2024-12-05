@@ -159,7 +159,9 @@ const SAEVisualizerPage: React.FC = () => {
           <div className="mt-3">This is a dead latent. It does not activate on any sequence.</div>
         )}
         <div className="mt-3">{dimToCuratedMap.has(selectedFeature) && desc}</div>
-        {SAEConfig?.supportsCustomSequence && <CustomSeqPlayground feature={selectedFeature} />}
+        {SAEConfig?.supportsCustomSequence && (
+          <CustomSeqPlayground feature={selectedFeature} saeName={selectedModel} />
+        )}
         {isLoading ? (
           <div className="flex items-center justify-center w-full mt-5">
             <img src={proteinEmoji} alt="Loading..." className="w-12 h-12 animate-wiggle mb-4" />
