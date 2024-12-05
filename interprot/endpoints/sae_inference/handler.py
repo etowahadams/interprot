@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 WEIGHTS_DIR = "/weights"
 SAE_NAME_TO_CHECKPOINT = {
     "SAE4096-L24": "esm2_plm1280_l24_sae4096_100Kseqs.pt",
-    "SAE4048-L24-ab": "esm2_plm1280_l24_sae4096_k128_auxk512_antibody_seqs.ckpt",
+    "SAE4096-L24-ab": "esm2_plm1280_l24_sae4096_k128_auxk512_antibody_seqs.ckpt",
 }
 
 

@@ -24,6 +24,7 @@ import { useUrlState } from "@/hooks/useUrlState";
 import { SAEContext } from "@/SAEContext";
 export default function CustomSeqSearchPage() {
   const { selectedModel } = useContext(SAEContext);
+
   const { urlInput, setUrlInput } = useUrlState();
   const [input, setInput] = useState<string>("");
   const [searchResults, setSearchResults] = useState<Array<{ dim: number; sae_acts: number[] }>>(
@@ -69,6 +70,7 @@ export default function CustomSeqSearchPage() {
 
   const handleSearch = useCallback(
     async (submittedInput: ValidSeqInput) => {
+      console.log("handling search");
       setIsLoading(true);
       setInput(submittedInput);
 
@@ -98,12 +100,11 @@ export default function CustomSeqSearchPage() {
   useEffect(() => {
     if (urlInput && (isPDBID(urlInput) || isProteinSequence(urlInput))) {
       setInput(urlInput);
-      handleSearch(urlInput);
     } else {
       setSearchResults([]);
       setInput("");
     }
-  }, [urlInput, handleSearch]);
+  }, [urlInput, handleSearch, isLoading]);
 
   return (
     <main

@@ -385,5 +385,19 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
     plmLayer: 24,
     defaultDim: 0,
     supportsCustomSequence: true,
+    curated: [
+      {
+        name: "beta strand middle residue",
+        dim: 2832,
+        desc: "Activates on the middle residue of a beta strand in antibody domains",
+        group: "structural",
+      },
+      {
+        name: "pumilio domain interior",
+        dim: 3729,
+        desc: "Activates on the interior of the Pumilio RNA-binding domains",
+        group: "structural",
+      },
+    ],
   },
 };
