@@ -5,9 +5,15 @@ import { Separator } from "@/components/ui/separator";
 
 interface FullSeqViewerProps {
   proteinActivationsData: ProteinActivationsData;
+  highlightStart?: number;
+  highlightEnd?: number;
 }
 
-const FullSeqsViewer: React.FC<FullSeqViewerProps> = ({ proteinActivationsData }) => {
+const FullSeqsViewer: React.FC<FullSeqViewerProps> = ({
+  proteinActivationsData,
+  highlightStart,
+  highlightEnd,
+}) => {
   const maxValue = useMemo(
     () => Math.max(...proteinActivationsData.chains.map((chain) => Math.max(...chain.activations))),
     [proteinActivationsData]
@@ -48,10 +54,16 @@ const FullSeqsViewer: React.FC<FullSeqViewerProps> = ({ proteinActivationsData }
                   fontFamily: "monospace",
                 }}
               >
-                {chain.sequence.split("").map((char, index) => {
-                  const color = redColorMapHex(chain.activations[index], maxValue);
+                {chain.sequence.split("").map((char, pos) => {
+                  const color = redColorMapHex(chain.activations[pos], maxValue);
+                  const isHighlighted =
+                    highlightStart === undefined
+                      ? pos <= (highlightEnd ?? -1)
+                      : highlightEnd === undefined
+                      ? pos >= highlightStart
+                      : pos >= highlightStart && pos <= highlightEnd;
                   return (
-                    <TooltipProvider key={`token-${index}`} delayDuration={100}>
+                    <TooltipProvider key={`token-${pos}`} delayDuration={100}>
                       <Tooltip>
                         <TooltipTrigger>
                           <span
@@ -61,13 +73,14 @@ const FullSeqsViewer: React.FC<FullSeqViewerProps> = ({ proteinActivationsData }
                               display: "inline-block",
                               width: "10px",
                               textAlign: "center",
+                              fontWeight: isHighlighted ? "bold" : "normal",
                             }}
                           >
                             {char}
                           </span>
                         </TooltipTrigger>
                         <TooltipContent>
-                          Position: {index}, SAE Activation: {chain.activations[index]?.toFixed(3)}
+                          Position: {pos}, SAE Activation: {chain.activations[pos]?.toFixed(3)}
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>

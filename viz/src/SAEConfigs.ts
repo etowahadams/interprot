@@ -393,6 +393,18 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
     supportsCustomSequence: true,
     curated: [
       {
+        name: "H1 start",
+        dim: 3369,
+        desc: "Activates on the first amino acid in the H1 CDR loop",
+        group: "CDR",
+      },
+      {
+        name: "H1 end",
+        dim: 2295,
+        desc: "Activates on the last amino acid in the H1 CDR loop",
+        group: "CDR",
+      },
+      {
         name: "beta sheet alternating",
         dim: 305,
         desc: "Activates on beta sheets in a weaving pattern. While it activates most strongly on cadherins, it also activates on beta barrels (e.g. PDB 2MLH).",

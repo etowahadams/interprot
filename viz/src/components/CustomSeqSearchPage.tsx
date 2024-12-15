@@ -101,9 +101,7 @@ export default function CustomSeqSearchPage() {
 
   const filteredResults = searchResults.filter((result) => {
     if (!startPos && !endPos && !minPercentActivation && !maxPercentActivation) return true;
-
-    const hasActivationInRange = result.sae_acts.some((act, index) => {
-      const pos = index + 1;
+    const hasActivationInRange = result.sae_acts.some((act, pos) => {
       const afterStart = !startPos || pos >= startPos;
       const beforeEnd = !endPos || pos <= endPos;
       return act > 0 && afterStart && beforeEnd;
@@ -174,6 +172,56 @@ export default function CustomSeqSearchPage() {
     }
   }, [urlInput, handleSearch]);
 
+  const sortResults = useCallback(
+    (results: Array<{ dim: number; sae_acts: number[] }>) => {
+      const sortedResults = [...results];
+      const start = startPos ?? 0;
+      const end = endPos ?? results[0]?.sae_acts.length ?? 0;
+
+      switch (sortBy) {
+        case "max":
+          sortedResults.sort((a, b) => {
+            const maxA = Math.max(...a.sae_acts.slice(start, end + 1));
+            const maxB = Math.max(...b.sae_acts.slice(start, end + 1));
+            return maxB - maxA;
+          });
+          break;
+        case "mean":
+          sortedResults.sort((a, b) => {
+            const sliceA = a.sae_acts.slice(start, end + 1);
+            const sliceB = b.sae_acts.slice(start, end + 1);
+            const meanA = sliceA.reduce((sum, val) => sum + val, 0) / sliceA.length;
+            const meanB = sliceB.reduce((sum, val) => sum + val, 0) / sliceB.length;
+            return meanB - meanA;
+          });
+          break;
+        case "mean_activated":
+          sortedResults.sort((a, b) => {
+            const sliceA = a.sae_acts.slice(start, end + 1);
+            const sliceB = b.sae_acts.slice(start, end + 1);
+            const activatedA = sliceA.filter((val) => val > 0);
+            const activatedB = sliceB.filter((val) => val > 0);
+            const meanA = activatedA.length
+              ? activatedA.reduce((sum, val) => sum + val, 0) / activatedA.length
+              : 0;
+            const meanB = activatedB.length
+              ? activatedB.reduce((sum, val) => sum + val, 0) / activatedB.length
+              : 0;
+            return meanB - meanA;
+          });
+          break;
+      }
+      return sortedResults;
+    },
+    [sortBy, startPos, endPos]
+  );
+
+  useEffect(() => {
+    if (searchResults.length > 0) {
+      setSearchResults((prevResults) => sortResults(prevResults));
+    }
+  }, [startPos, endPos, sortResults, searchResults.length]);
+
   return (
     <main
       className={`min-h-screen w-full overflow-x-hidden ${
@@ -223,15 +271,20 @@ export default function CustomSeqSearchPage() {
 
                         <div className="p-4 space-y-4">
                           <div className="space-y-2">
-                            <label className="text-sm font-medium">position range</label>
+                            <label className="text-sm font-medium">
+                              position range{" "}
+                              <div className="font-normal text-muted-foreground mt-1">
+                                (inclusive, will show up as bold in results)
+                              </div>
+                            </label>
                             <div className="flex items-center gap-2">
                               <Input
                                 type="number"
                                 className="w-24 text-sm"
                                 placeholder="start"
-                                min={1}
+                                min={0}
                                 max={submittedSeqRef.current?.length}
-                                value={tempStartPos || ""}
+                                value={tempStartPos !== undefined ? tempStartPos : ""}
                                 onChange={(e) => {
                                   const val = e.target.value ? parseInt(e.target.value) : undefined;
                                   setTempStartPos(val);
@@ -242,9 +295,9 @@ export default function CustomSeqSearchPage() {
                                 type="number"
                                 className="w-24 text-sm"
                                 placeholder="end"
-                                min={1}
+                                min={0}
                                 max={submittedSeqRef.current?.length}
-                                value={tempEndPos || ""}
+                                value={tempEndPos !== undefined ? tempEndPos : ""}
                                 onChange={(e) => {
                                   const val = e.target.value ? parseInt(e.target.value) : undefined;
                                   setTempEndPos(val);
@@ -308,45 +361,14 @@ export default function CustomSeqSearchPage() {
                       onValueChange={(value) => {
                         setSortBy(value);
                         setCurrentPage(1);
-                        setSearchResults((prevResults) => {
-                          const sortedResults = [...prevResults];
-                          switch (value) {
-                            case "max":
-                              sortedResults.sort(
-                                (a, b) => Math.max(...b.sae_acts) - Math.max(...a.sae_acts)
-                              );
-                              break;
-                            case "mean":
-                              sortedResults.sort((a, b) => {
-                                const meanA =
-                                  a.sae_acts.reduce((sum, val) => sum + val, 0) / a.sae_acts.length;
-                                const meanB =
-                                  b.sae_acts.reduce((sum, val) => sum + val, 0) / b.sae_acts.length;
-                                return meanB - meanA;
-                              });
-                              break;
-                            case "mean_activated":
-                              sortedResults.sort((a, b) => {
-                                const activatedA = a.sae_acts.filter((val) => val > 0);
-                                const activatedB = b.sae_acts.filter((val) => val > 0);
-                                const meanA = activatedA.length
-                                  ? activatedA.reduce((sum, val) => sum + val, 0) /
-                                    activatedA.length
-                                  : 0;
-                                const meanB = activatedB.length
-                                  ? activatedB.reduce((sum, val) => sum + val, 0) /
-                                    activatedB.length
-                                  : 0;
-                                return meanB - meanA;
-                              });
-                              break;
-                          }
-                          return sortedResults;
-                        });
+                        setSearchResults((prevResults) => sortResults(prevResults));
                       }}
                     >
-                      <SelectTrigger className="w-full sm:w-[320px]">
-                        <SelectValue placeholder="Sort by..." />
+                      <SelectTrigger className="w-full sm:w-[350px]">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">Sort by:</span>
+                          <SelectValue placeholder="Choose sorting method" />
+                        </div>
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="max">max activation across</SelectItem>
@@ -374,6 +396,8 @@ export default function CustomSeqSearchPage() {
                           },
                         ],
                       }}
+                      highlightStart={startPos}
+                      highlightEnd={endPos}
                     />
                   ))}
                   <Pagination>

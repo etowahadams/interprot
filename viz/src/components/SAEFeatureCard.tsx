@@ -8,9 +8,13 @@ import { Link, useLocation } from "react-router-dom";
 export default function SAEFeatureCard({
   dim,
   proteinActivationsData,
+  highlightStart,
+  highlightEnd,
 }: {
   dim: number;
   proteinActivationsData: ProteinActivationsData;
+  highlightStart?: number;
+  highlightEnd?: number;
 }) {
   const { SAEConfig } = useContext(SAEContext);
   const location = useLocation();
@@ -24,7 +28,11 @@ export default function SAEFeatureCard({
           {desc && <CardDescription>{desc}</CardDescription>}
         </CardHeader>
         <CardContent>
-          <FullSeqsViewer proteinActivationsData={proteinActivationsData} />
+          <FullSeqsViewer
+            proteinActivationsData={proteinActivationsData}
+            highlightStart={highlightStart}
+            highlightEnd={highlightEnd}
+          />
         </CardContent>
       </Card>
     </Link>
