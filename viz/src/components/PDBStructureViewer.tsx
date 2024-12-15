@@ -197,8 +197,8 @@ const PDBStructureViewer = ({
         StructureCache[proteinActivationsData.pdbId] = pdbData;
         renderViewer(pdbData);
       } catch (error) {
-        console.error("Error folding sequence:", error);
-        setError("An error occurred while folding the sequence with ESMFold.");
+        console.error("Error loading structure:", error);
+        setError("An error occurred while loading the structure from PDB.");
       }
     };
 

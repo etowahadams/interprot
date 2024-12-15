@@ -19,7 +19,13 @@ import { getSAEAllDimsActivations } from "@/runpod.ts";
 import SeqInput, { ValidSeqInput } from "./SeqInput";
 import { EXAMPLE_SEQS_FOR_SEARCH } from "./ui/ExampleSeqsForSearch";
 import { Input } from "@/components/ui/input";
-import { isPDBID, isProteinSequence, AminoAcidSequence, getPDBChainsData } from "@/utils";
+import {
+  isPDBID,
+  isProteinSequence,
+  AminoAcidSequence,
+  getPDBChainsData,
+  PDBChainsData,
+} from "@/utils";
 import { useUrlState } from "@/hooks/useUrlState";
 import { SAEContext } from "@/SAEContext";
 import {
@@ -53,8 +59,6 @@ export default function CustomSeqSearchPage() {
   const [startPos, setStartPos] = useState<number | undefined>();
   const [endPos, setEndPos] = useState<number | undefined>();
 
-  const [warning, setWarning] = useState<string | undefined>(undefined);
-
   const [minPercentActivation, setMinPercentActivation] = useState<number | undefined>();
   const [maxPercentActivation, setMaxPercentActivation] = useState<number | undefined>(
     DEFAULT_MAX_PERCENT_ACTIVATION
@@ -69,12 +73,14 @@ export default function CustomSeqSearchPage() {
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
+  const [chains, setChains] = useState<PDBChainsData[]>([]);
+  const [selectedChain, setSelectedChain] = useState<string>("");
+
   useEffect(() => {
     setTempStartPos(startPos);
     setTempEndPos(endPos);
     setTempMinPercentActivation(minPercentActivation);
     setTempMaxPercentActivation(maxPercentActivation);
-    setWarning(undefined);
   }, [startPos, endPos, minPercentActivation, maxPercentActivation]);
 
   const applyFilters = () => {
@@ -135,29 +141,49 @@ export default function CustomSeqSearchPage() {
       setIsLoading(true);
       setInput(submittedInput);
 
-      let warning = "";
-      let seq: AminoAcidSequence;
       if (isPDBID(submittedInput)) {
         const pdbChainsData = await getPDBChainsData(submittedInput);
-        if (pdbChainsData.length > 1) {
-          warning = "PDB entry contains multiple chains. Only the first chain is considered.";
+        setChains(pdbChainsData);
+
+        // If there's only one chain, use it directly
+        if (pdbChainsData.length === 1) {
+          submittedSeqRef.current = pdbChainsData[0].sequence;
+          setSearchResults(
+            await getSAEAllDimsActivations({
+              sequence: pdbChainsData[0].sequence,
+              sae_name: model,
+            })
+          );
+          setUrlInput("pdb", submittedInput);
+        } else {
+          // If there are multiple chains, set the first one as default
+          setSelectedChain(pdbChainsData[0].id);
+          submittedSeqRef.current = pdbChainsData[0].sequence;
+          setSearchResults(
+            await getSAEAllDimsActivations({
+              sequence: pdbChainsData[0].sequence,
+              sae_name: model,
+            })
+          );
+          setUrlInput("pdb", submittedInput);
         }
-        seq = pdbChainsData[0].sequence;
-        setUrlInput("pdb", submittedInput);
       } else {
-        seq = submittedInput;
+        submittedSeqRef.current = submittedInput;
+        setSearchResults(
+          await getSAEAllDimsActivations({
+            sequence: submittedInput,
+            sae_name: model,
+          })
+        );
         setUrlInput("seq", submittedInput);
+        setChains([]);
       }
 
-      submittedSeqRef.current = seq;
-      setSearchResults(await getSAEAllDimsActivations({ sequence: seq, sae_name: model }));
       setIsLoading(false);
-
       setStartPos(undefined);
       setEndPos(undefined);
       setMinPercentActivation(undefined);
       setMaxPercentActivation(DEFAULT_MAX_PERCENT_ACTIVATION);
-      setWarning(warning);
     },
     [model, setUrlInput]
   );
@@ -222,6 +248,19 @@ export default function CustomSeqSearchPage() {
     }
   }, [startPos, endPos, sortResults, searchResults.length]);
 
+  useEffect(() => {
+    if (selectedChain && chains.length > 0) {
+      const chain = chains.find((c) => c.id === selectedChain);
+      if (chain) {
+        submittedSeqRef.current = chain.sequence;
+        getSAEAllDimsActivations({
+          sequence: chain.sequence,
+          sae_name: model,
+        }).then(setSearchResults);
+      }
+    }
+  }, [selectedChain, chains, model]);
+
   return (
     <main
       className={`min-h-screen w-full overflow-x-hidden ${
@@ -244,7 +283,22 @@ export default function CustomSeqSearchPage() {
         </div>
 
         <div className="flex flex-col gap-2 mt-4 text-left">
-          {warning && <div className="text-sm text-yellow-500">{warning}</div>}
+          {chains.length > 1 && (
+            <div className="flex items-center gap-2 mb-4">
+              <Select value={selectedChain} onValueChange={setSelectedChain}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Select chain" />
+                </SelectTrigger>
+                <SelectContent>
+                  {chains.map((chain) => (
+                    <SelectItem key={chain.id} value={chain.id}>
+                      Chain {chain.id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {searchResults.length > 0 && (
             <>
