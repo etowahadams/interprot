@@ -393,6 +393,12 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
     supportsCustomSequence: true,
     curated: [
       {
+        name: "H2",
+        dim: 2817,
+        desc: "Activates on the H2 CDR loop",
+        group: "CDR",
+      },
+      {
         name: "H1 start",
         dim: 3369,
         desc: "Activates on the first amino acid in the H1 CDR loop",
@@ -402,6 +408,12 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
         name: "H1 end",
         dim: 2295,
         desc: "Activates on the last amino acid in the H1 CDR loop",
+        group: "CDR",
+      },
+      {
+        name: "H3 start",
+        dim: 923,
+        desc: "Activates on the first amino acid in the H3 CDR loop",
         group: "CDR",
       },
       {
