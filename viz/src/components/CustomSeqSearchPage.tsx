@@ -74,17 +74,6 @@ export default function CustomSeqSearchPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [chains, setChains] = useState<PDBChainsData[]>([]);
 
-  useEffect(() => {
-    if (!searchResults.length) return;
-    if (!urlState.maxPctAct) {
-      setUrlState({ maxPctAct: DEFAULT_MAX_PERCENT_ACTIVATION });
-      setMaxPctAct(DEFAULT_MAX_PERCENT_ACTIVATION);
-    }
-    if (!urlState.sortBy) {
-      setUrlState({ sortBy: DEFAULT_SORT_BY });
-    }
-  }, [searchResults.length, urlState.maxPctAct, urlState.sortBy, setUrlState]);
-
   const applyFilters = () => {
     setUrlState({
       start: startPos,
@@ -96,6 +85,7 @@ export default function CustomSeqSearchPage() {
     setIsFilterOpen(false);
   };
 
+  // FIXME: there's a bug where this doesn't clear maxPctAct
   const clearFilters = () => {
     setStartPos(undefined);
     setEndPos(undefined);
@@ -179,21 +169,6 @@ export default function CustomSeqSearchPage() {
     [model, setUrlState]
   );
 
-  useEffect(() => {
-    if (urlState.pdb && isPDBID(urlState.pdb)) {
-      setInput(urlState.pdb);
-      handleSearch(urlState.pdb);
-    } else if (urlState.seq && isProteinSequence(urlState.seq)) {
-      setInput(urlState.seq);
-      handleSearch(urlState.seq);
-    } else {
-      setInput("");
-      setSearchResults([]);
-    }
-    // handleSearch runs unnecessarily if I add it here
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [urlState.pdb, urlState.seq]);
-
   const sortResults = useCallback(
     (results: Array<{ dim: number; sae_acts: number[] }>) => {
       const sortedResults = [...results];
@@ -238,12 +213,23 @@ export default function CustomSeqSearchPage() {
     [urlState.sortBy, urlState.start, urlState.end]
   );
 
+  // Do a search whenever the input changes
   useEffect(() => {
-    if (searchResults.length > 0) {
-      setSearchResults((prevResults) => sortResults(prevResults));
+    if (urlState.pdb && isPDBID(urlState.pdb)) {
+      setInput(urlState.pdb);
+      handleSearch(urlState.pdb);
+    } else if (urlState.seq && isProteinSequence(urlState.seq)) {
+      setInput(urlState.seq);
+      handleSearch(urlState.seq);
+    } else {
+      setInput("");
+      setSearchResults([]);
     }
-  }, [urlState.sortBy, urlState.start, urlState.end, sortResults, searchResults.length]);
+    // handleSearch runs unnecessarily if I add it here
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlState.pdb, urlState.seq]);
 
+  // Do a search whenever the chain changes
   useEffect(() => {
     if (urlState.chain && chains.length > 0) {
       const chain = chains.find((c) => c.id === urlState.chain);
@@ -259,6 +245,25 @@ export default function CustomSeqSearchPage() {
       }
     }
   }, [urlState.chain, chains, model]);
+
+  // Set default filter and sort once results are loaded
+  useEffect(() => {
+    if (!searchResults.length) return;
+    if (!urlState.maxPctAct) {
+      setUrlState({ maxPctAct: DEFAULT_MAX_PERCENT_ACTIVATION });
+      setMaxPctAct(DEFAULT_MAX_PERCENT_ACTIVATION);
+    }
+    if (!urlState.sortBy) {
+      setUrlState({ sortBy: DEFAULT_SORT_BY });
+    }
+  }, [searchResults.length, urlState.maxPctAct, urlState.sortBy, setUrlState]);
+
+  // Sort results whenever the sortBy or start/end position changes
+  useEffect(() => {
+    if (searchResults.length > 0) {
+      setSearchResults((prevResults) => sortResults(prevResults));
+    }
+  }, [urlState.sortBy, urlState.start, urlState.end, sortResults, searchResults.length]);
 
   return (
     <main
