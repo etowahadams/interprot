@@ -23,11 +23,11 @@ import { Toggle } from "@/components/ui/toggle";
 import { Dices, Search } from "lucide-react";
 import { SAEContext } from "../SAEContext";
 import Markdown from "@/components/Markdown";
-import { usePreserveQueryParamsNavigate } from "@/hooks/useNagivateWithQueryParams";
+import { useNavigateWithSeqContext } from "@/hooks/useNagivateWithQueryParams";
 
 export default function SAESidebar() {
   const { setOpenMobile } = useSidebar();
-  const navigate = usePreserveQueryParamsNavigate();
+  const navigate = useNavigateWithSeqContext();
   const { model, feature, SAEConfig } = useContext(SAEContext);
 
   const handleFeatureChange = (feature: number) => {
