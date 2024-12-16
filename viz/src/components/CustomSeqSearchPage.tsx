@@ -69,7 +69,9 @@ export default function CustomSeqSearchPage() {
   const [startPos, setStartPos] = useState<number | undefined>();
   const [endPos, setEndPos] = useState<number | undefined>();
   const [minPctAct, setMinPctAct] = useState<number | undefined>();
-  const [maxPctAct, setMaxPctAct] = useState<number | undefined>(DEFAULT_MAX_PERCENT_ACTIVATION);
+  const [maxPctAct, setMaxPctAct] = useState<number | undefined>(
+    urlState.maxPctAct ?? DEFAULT_MAX_PERCENT_ACTIVATION
+  );
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [chains, setChains] = useState<PDBChainsData[]>([]);
