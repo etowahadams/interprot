@@ -12,7 +12,7 @@ import {
 import CustomStructureViewer from "./CustomStructureViewer";
 import { getSAEDimActivations, getSteeredSequence } from "@/runpod.ts";
 import SeqInput, { ValidSeqInput } from "./SeqInput";
-import { useUrlState } from "@/hooks/useUrlState";
+import useUrlState from "@ahooksjs/use-url-state";
 import FullSeqsViewer from "./FullSeqsViewer";
 import PDBStructureViewer from "./PDBStructureViewer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,7 +50,7 @@ const CustomSeqPlayground = ({ feature, saeName }: CustomSeqPlaygroundProps) => 
     initialState.steeredActivations
   );
 
-  const { urlInput, setUrlInput, clearUrlInput } = useUrlState();
+  const [urlState, setUrlState] = useUrlState();
 
   const handleSubmit = useCallback(
     async (submittedInput: ValidSeqInput) => {
@@ -62,18 +62,18 @@ const CustomSeqPlayground = ({ feature, saeName }: CustomSeqPlaygroundProps) => 
       setSteeredActivations(initialState.steeredActivations);
 
       if (isPDBID(submittedInput)) {
-        setUrlInput("pdb", submittedInput);
+        setUrlState({ pdb: submittedInput, seq: undefined });
         setInputProteinActivations(
           await constructProteinActivationsDataFromPDBID(submittedInput, feature, saeName)
         );
       } else {
-        setUrlInput("seq", submittedInput);
+        setUrlState({ pdb: undefined, seq: submittedInput });
         setInputProteinActivations(
           await constructProteinActivationsDataFromSequence(submittedInput, feature, saeName)
         );
       }
     },
-    [feature, setUrlInput, saeName]
+    [feature, setUrlState, saeName]
   );
 
   // Reset some states when the user navigates to a new feature
@@ -87,13 +87,14 @@ const CustomSeqPlayground = ({ feature, saeName }: CustomSeqPlaygroundProps) => 
 
   // If an input is set in the URL, submit it
   useEffect(() => {
-    if (urlInput) {
-      if (isProteinSequence(urlInput) || isPDBID(urlInput)) {
-        setCustomSeqInput(urlInput);
-        handleSubmit(urlInput);
-      }
+    if (
+      (urlState.pdb && isPDBID(urlState.pdb)) ||
+      (urlState.seq && isProteinSequence(urlState.seq))
+    ) {
+      setCustomSeqInput(urlState.pdb || urlState.seq);
+      handleSubmit(urlState.pdb || urlState.seq);
     }
-  }, [urlInput, setCustomSeqInput, handleSubmit]);
+  }, [urlState, setCustomSeqInput, handleSubmit]);
 
   const handleSteer = async () => {
     setViewerState(PlaygroundState.LOADING_STEERED_SEQUENCE);
@@ -127,7 +128,7 @@ const CustomSeqPlayground = ({ feature, saeName }: CustomSeqPlaygroundProps) => 
           onClear={() => {
             setCustomSeqInput("");
             setInputProteinActivations(initialState.inputProteinActivations);
-            clearUrlInput();
+            setUrlState({});
           }}
         />
       </div>
@@ -152,13 +153,14 @@ const CustomSeqPlayground = ({ feature, saeName }: CustomSeqPlaygroundProps) => 
             </p>
           )}
 
-          {isPDBID(urlInput) ? (
+          {urlState.pdb && (
             <PDBStructureViewer
               viewerId="custom-viewer"
               proteinActivationsData={inputProteinActivations}
               onLoad={onStructureLoad}
             />
-          ) : (
+          )}
+          {urlState.seq && (
             <CustomStructureViewer
               viewerId="custom-viewer"
               proteinActivationsData={inputProteinActivations}

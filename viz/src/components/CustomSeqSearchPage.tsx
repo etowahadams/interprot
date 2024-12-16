@@ -25,7 +25,7 @@ import {
   getPDBChainsData,
   PDBChainsData,
 } from "@/utils";
-import { useUrlState } from "@/hooks/useUrlState";
+import useUrlState from "@ahooksjs/use-url-state";
 import { SAEContext } from "@/SAEContext";
 import { SAE_CONFIGS } from "@/SAEConfigs";
 import {
@@ -44,13 +44,13 @@ const DEFAULT_MAX_PERCENT_ACTIVATION = 20;
 export default function CustomSeqSearchPage() {
   const { model } = useContext(SAEContext);
 
-  const { urlInput, setUrlInput } = useUrlState();
+  const [urlState, setUrlState] = useUrlState();
   const [input, setInput] = useState<string>("");
   const [searchResults, setSearchResults] = useState<Array<{ dim: number; sae_acts: number[] }>>(
     []
   );
   const [isLoading, setIsLoading] = useState(false);
-  const hasSubmittedInput = urlInput !== "";
+  const hasSubmittedInput = urlState.pdb || urlState.seq;
   const submittedSeqRef = useRef<AminoAcidSequence | undefined>(undefined);
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -72,9 +72,7 @@ export default function CustomSeqSearchPage() {
   );
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-
   const [chains, setChains] = useState<PDBChainsData[]>([]);
-  const [selectedChain, setSelectedChain] = useState<string>("");
 
   useEffect(() => {
     setTempStartPos(startPos);
@@ -144,29 +142,16 @@ export default function CustomSeqSearchPage() {
       if (isPDBID(submittedInput)) {
         const pdbChainsData = await getPDBChainsData(submittedInput);
         setChains(pdbChainsData);
-
-        // If there's only one chain, use it directly
-        if (pdbChainsData.length === 1) {
-          submittedSeqRef.current = pdbChainsData[0].sequence;
-          setSearchResults(
-            await getSAEAllDimsActivations({
-              sequence: pdbChainsData[0].sequence,
-              sae_name: model,
-            })
-          );
-          setUrlInput("pdb", submittedInput);
-        } else {
-          // If there are multiple chains, set the first one as default
-          setSelectedChain(pdbChainsData[0].id);
-          submittedSeqRef.current = pdbChainsData[0].sequence;
-          setSearchResults(
-            await getSAEAllDimsActivations({
-              sequence: pdbChainsData[0].sequence,
-              sae_name: model,
-            })
-          );
-          setUrlInput("pdb", submittedInput);
-        }
+        setUrlState((prev) => ({
+          chain: prev.chain || pdbChainsData[0].id,
+        }));
+        submittedSeqRef.current = pdbChainsData[0].sequence;
+        setSearchResults(
+          await getSAEAllDimsActivations({
+            sequence: pdbChainsData[0].sequence,
+            sae_name: model,
+          })
+        );
       } else {
         submittedSeqRef.current = submittedInput;
         setSearchResults(
@@ -175,7 +160,6 @@ export default function CustomSeqSearchPage() {
             sae_name: model,
           })
         );
-        setUrlInput("seq", submittedInput);
         setChains([]);
       }
 
@@ -185,18 +169,21 @@ export default function CustomSeqSearchPage() {
       setMinPercentActivation(undefined);
       setMaxPercentActivation(DEFAULT_MAX_PERCENT_ACTIVATION);
     },
-    [model, setUrlInput]
+    [model, setUrlState]
   );
 
   useEffect(() => {
-    if (urlInput && (isPDBID(urlInput) || isProteinSequence(urlInput))) {
-      setInput(urlInput);
-      handleSearch(urlInput);
+    if (
+      (urlState.pdb && isPDBID(urlState.pdb)) ||
+      (urlState.seq && isProteinSequence(urlState.seq))
+    ) {
+      setInput(urlState.pdb || urlState.seq);
+      handleSearch(urlState.pdb || urlState.seq);
     } else {
       setSearchResults([]);
       setInput("");
     }
-  }, [urlInput, handleSearch]);
+  }, [urlState.pdb, urlState.seq, handleSearch]);
 
   const sortResults = useCallback(
     (results: Array<{ dim: number; sae_acts: number[] }>) => {
@@ -249,8 +236,8 @@ export default function CustomSeqSearchPage() {
   }, [startPos, endPos, sortResults, searchResults.length]);
 
   useEffect(() => {
-    if (selectedChain && chains.length > 0) {
-      const chain = chains.find((c) => c.id === selectedChain);
+    if (urlState.chain && chains.length > 0) {
+      const chain = chains.find((c) => c.id === urlState.chain);
       if (chain) {
         setSearchResults([]);
         submittedSeqRef.current = chain.sequence;
@@ -262,7 +249,7 @@ export default function CustomSeqSearchPage() {
         });
       }
     }
-  }, [selectedChain, chains, model]);
+  }, [urlState.chain, chains, model]);
 
   return (
     <main
@@ -278,7 +265,13 @@ export default function CustomSeqSearchPage() {
           <SeqInput
             input={input}
             setInput={setInput}
-            onSubmit={handleSearch}
+            onSubmit={(seqInput) => {
+              if (isPDBID(seqInput)) {
+                setUrlState({ pdb: seqInput, seq: undefined });
+              } else {
+                setUrlState({ pdb: undefined, seq: seqInput });
+              }
+            }}
             loading={isLoading}
             buttonText="Search"
             exampleSeqs={!hasSubmittedInput ? SAE_CONFIGS[model].searchExamples : undefined}
@@ -286,9 +279,12 @@ export default function CustomSeqSearchPage() {
         </div>
 
         <div className="flex flex-col gap-2 mt-4 text-left">
-          {!isLoading && chains.length > 1 && (
+          {!isLoading && urlState.pdb && (
             <div className="flex items-center gap-2 mb-4">
-              <Select value={selectedChain} onValueChange={setSelectedChain}>
+              <Select
+                value={urlState.chain}
+                onValueChange={(value) => setUrlState({ ...urlState, chain: value })}
+              >
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="Select chain" />
                 </SelectTrigger>
@@ -322,9 +318,8 @@ export default function CustomSeqSearchPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent className="w-80">
-                        <DropdownMenuLabel>Filter Features</DropdownMenuLabel>
+                        <DropdownMenuLabel>Filter Results</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-
                         <div className="p-4 space-y-4">
                           <div className="space-y-2">
                             <label className="text-sm font-medium">
