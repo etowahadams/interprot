@@ -92,12 +92,12 @@ class SAELightningModule(pl.LightningModule):
     def validation_step(self, batch, batch_idx):
         val_seqs = batch["Sequence"]
         batch_size = len(val_seqs)
-        esm2_model = get_esm_model(
-            self.args.d_model, self.alphabet, self.args.esm2_weight
-        )
+        with torch.no_grad():
+            esm2_model = get_esm_model(
+                self.args.d_model, self.alphabet, self.args.esm2_weight
+            )
 
         diff_CE_all = torch.zeros(batch_size, device=self.device)
-        val_loss_all = torch.zeros(batch_size, device=self.device)
         mse_loss_all = torch.zeros(batch_size, device=self.device)
 
         # Running inference one sequence at a time
@@ -106,11 +106,9 @@ class SAELightningModule(pl.LightningModule):
                 seq, self.layer_to_use
             )
 
-            # Calculate reconstruction loss
-            recons, auxk, num_dead = self(esm_layer_acts)
-            mse_loss, auxk_loss = loss_fn(esm_layer_acts, recons, auxk)
-            loss = mse_loss + auxk_loss
-            val_loss_all[i] = loss
+            # Calculate MSE
+            recons = self.sae_model.forward_val(esm_layer_acts)
+            mse_loss, auxk_loss = loss_fn(esm_layer_acts, recons, None)
             mse_loss_all[i] = mse_loss
 
             # Calculate difference in cross-entropy
@@ -121,7 +119,6 @@ class SAELightningModule(pl.LightningModule):
 
         val_metrics = {
             "mse_loss": mse_loss_all.mean(),
-            "val_loss": val_loss_all.mean(),
             "diff_cross_entropy": diff_CE_all.mean(),
         }
         # Return batch-level metrics for aggregation
@@ -130,20 +127,12 @@ class SAELightningModule(pl.LightningModule):
 
     def on_validation_epoch_end(self):
         # Aggregate metrics across batches
-        avg_val_loss = torch.stack([x["val_loss"] for x in self.validation_step_outputs]).mean()
         avg_diff_cross_entropy = torch.stack(
             [x["diff_cross_entropy"] for x in self.validation_step_outputs]
         ).mean()
         avg_mse_loss = torch.stack([x["mse_loss"] for x in self.validation_step_outputs]).mean()
 
         # Log aggregated metrics
-        self.log(
-            "avg_val_loss",
-            avg_val_loss,
-            on_epoch=True,
-            prog_bar=True,
-            logger=True,
-        )
         self.log(
             "avg_mse_loss", avg_mse_loss, on_epoch=True, prog_bar=True, logger=True
         )
