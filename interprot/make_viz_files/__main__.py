@@ -95,7 +95,7 @@ def make_viz_files(checkpoint_files: list[str], sequences_file: str):
             # Move to CPU and convert to numpy immediately
             sae_acts_cpu = sae_acts.cpu().numpy()
             all_seqs_max_act[:, seq_idx] = np.max(sae_acts_cpu, axis=0)
-            sae_acts_int = (sae_acts_cpu).astype(np.float16)
+            sae_acts_int = (sae_acts_cpu).astype(np.float32)
             # Convert to sparse matrix. This significantly reduces memory usage
             sparse_acts = sparse.csr_matrix(sae_acts_int)
             all_acts[seq_idx] = sparse_acts
