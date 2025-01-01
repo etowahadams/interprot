@@ -177,16 +177,17 @@ def write_viz_file(dim_info, dim, all_acts, df, range_names):
             alphafolddb_id = df[seq_idx]["AlphaFoldDB"].item().split(";")[0]
             protein_name = df[seq_idx]["Protein names"].item()
             sequence = df[seq_idx]["Sequence"].item()
+            # May be `None` in cases where we couldn't generate the 3Di sequence
+            structure_token_sequence = df[seq_idx]["3Di Sequence"].item()
 
             example = {
                 "sae_acts": [round(float(act), 1) for act in dim_acts],
                 "sequence": sequence,
+                "3di_sequence": structure_token_sequence,
                 "alphafold_id": alphafolddb_id,
                 "uniprot_id": uniprot_id,
                 "name": protein_name,
             }
-            if "3Di Sequence" in df.columns and not df[seq_idx]["3Di Sequence"].is_null():
-                example["3di_sequence"] = df[seq_idx]["3Di Sequence"].item()
 
             range_examples["examples"].append(example)
 
