@@ -2,15 +2,14 @@ import heapq
 import json
 import os
 import re
-from typing import Any
 
 import click
 import numpy as np
 import polars as pl
 import torch
+from scipy import sparse
 from tqdm import tqdm
 from transformers import AutoTokenizer, EsmModel
-from scipy import sparse
 
 from interprot.sae_model import SparseAutoencoder
 from interprot.utils import get_layer_activations
@@ -22,9 +21,7 @@ NUM_SEQS_PER_DIM = 12
 def get_esm_layer_acts(
     seq: str, tokenizer: AutoTokenizer, plm_model: EsmModel, plm_layer: int
 ) -> torch.Tensor:
-    acts = get_layer_activations(
-        tokenizer=tokenizer, plm=plm_model, seqs=[seq], layer=plm_layer
-    )[0]
+    acts = get_layer_activations(tokenizer=tokenizer, plm=plm_model, seqs=[seq], layer=plm_layer)[0]
     return acts
 
 
@@ -57,15 +54,11 @@ def make_viz_files(checkpoint_files: list[str], sequences_file: str):
         if matches:
             plm_dim, plm_layer, sae_dim = map(int, matches.groups())
         else:
-            raise ValueError(
-                "Checkpoint file must be named in the format plm<n>_l<n>_sae<n>"
-            )
+            raise ValueError("Checkpoint file must be named in the format plm<n>_l<n>_sae<n>")
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         tokenizer = AutoTokenizer.from_pretrained("facebook/esm2_t33_650M_UR50D")
-        plm_model = (
-            EsmModel.from_pretrained("facebook/esm2_t33_650M_UR50D").to(device).eval()
-        )
+        plm_model = EsmModel.from_pretrained("facebook/esm2_t33_650M_UR50D").to(device).eval()
         sae_model = SparseAutoencoder(plm_dim, sae_dim).to(device)
 
         try:
@@ -114,14 +107,12 @@ def make_viz_files(checkpoint_files: list[str], sequences_file: str):
         with open(os.path.join(OUTPUT_ROOT_DIR, "all_seqs_max_act.npy"), "wb") as f:
             np.save(f, all_seqs_max_act)
 
-        hidden_dim_to_seqs = {dim: {} for dim in range(sae_dim)}
+        hidden_dim_to_seqs: dict[int, dict] = {dim: {} for dim in range(sae_dim)}
 
         act_ranges = [[0, 0.25], [0.25, 0.5], [0.5, 0.75], [0.75, 1]]
         range_names = [f"{start}-{end}" for start, end in act_ranges]
 
-        for dim in tqdm(
-            range(sae_dim), desc="Finding highest activating seqs (Step 2/3)"
-        ):
+        for dim in tqdm(range(sae_dim), desc="Finding highest activating seqs (Step 2/3)"):
             dim_maxes = all_seqs_max_act[dim]
             non_zero_maxes = dim_maxes[dim_maxes > 0]
 
@@ -137,9 +128,7 @@ def make_viz_files(checkpoint_files: list[str], sequences_file: str):
                 hidden_dim_to_seqs[dim]["top_pfam"] = top_families
 
             non_zero_maxes = dim_maxes[dim_maxes > 0]
-            hidden_dim_to_seqs[dim]["freq_active"] = len(non_zero_maxes) / len(
-                dim_maxes
-            )
+            hidden_dim_to_seqs[dim]["freq_active"] = len(non_zero_maxes) / len(dim_maxes)
             hidden_dim_to_seqs[dim]["n_seqs"] = len(non_zero_maxes)
             hidden_dim_to_seqs[dim]["max_act"] = float(dim_maxes.max())
 
@@ -158,7 +147,7 @@ def make_viz_files(checkpoint_files: list[str], sequences_file: str):
                 print(f"Skipping dimension {dim} as it has no sequences")
                 continue
             write_viz_file(hidden_dim_to_seqs[dim], dim, all_acts, df, range_names)
-            
+
 
 def write_viz_file(dim_info, dim, all_acts, df, range_names):
     viz_file = {"ranges": {}}
@@ -189,20 +178,22 @@ def write_viz_file(dim_info, dim, all_acts, df, range_names):
             protein_name = df[seq_idx]["Protein names"].item()
             sequence = df[seq_idx]["Sequence"].item()
 
-            examples = {
+            example = {
                 "sae_acts": [round(float(act), 1) for act in dim_acts],
                 "sequence": sequence,
                 "alphafold_id": alphafolddb_id,
                 "uniprot_id": uniprot_id,
                 "name": protein_name,
             }
-            range_examples["examples"].append(examples)
+            if "3Di Sequence" in df.columns and not df[seq_idx]["3Di Sequence"].is_null():
+                example["3di_sequence"] = df[seq_idx]["3Di Sequence"].item()
+
+            range_examples["examples"].append(example)
 
         viz_file["ranges"][range_name] = range_examples
 
     with open(os.path.join(OUTPUT_ROOT_DIR, f"{dim}.json"), "w") as f:
         json.dump(viz_file, f)
-
 
 
 def get_top_pfam(df, dim_maxes, act_gt=0.75, n_classes=3, frac_above_threshold=0.8):
@@ -216,7 +207,8 @@ def get_top_pfam(df, dim_maxes, act_gt=0.75, n_classes=3, frac_above_threshold=0
         dim_maxes: Numpy array of max activations for each sequence
         act_gt: Threshold for activations
         n_classes: Number of top Pfam families to return
-        frac_above_threshold: Fraction of sequences that must be accounted for by the top n_classes Pfam families
+        frac_above_threshold: Fraction of sequences that must be accounted for by the top n_classes
+            Pfam families
 
     Returns:
         List of top Pfam families
@@ -233,25 +225,16 @@ def get_top_pfam(df, dim_maxes, act_gt=0.75, n_classes=3, frac_above_threshold=0
         pl.col("Pfam").str.strip_chars(";").str.split(";").alias("pfam_list")
     )
     exploded = gt_50.explode("pfam_list")
-    count_table = (
-        exploded["pfam_list"].value_counts().drop_nulls().sort("count", descending=True)
-    )
+    count_table = exploded["pfam_list"].value_counts().drop_nulls().sort("count", descending=True)
     count_order = {value: i for i, value in enumerate(count_table["pfam_list"])}
     exploded = (
-        exploded.with_columns(
-            pl.col("pfam_list").replace_strict(count_order).alias("pfam_ordered")
-        )
+        exploded.with_columns(pl.col("pfam_list").replace_strict(count_order).alias("pfam_ordered"))
         .sort("pfam_ordered")
         .drop_nulls()
     )
     cleaned_df = exploded.unique(subset=["Entry"], maintain_order=True)
     cleaned_df = cleaned_df.rename({"pfam_list": "pfam_common"})
-    keep = (
-        cleaned_df["pfam_common"]
-        .value_counts()
-        .drop_nulls()
-        .sort("count", descending=True)
-    )
+    keep = cleaned_df["pfam_common"].value_counts().drop_nulls().sort("count", descending=True)
 
     if len(keep) >= 1:
         top_count = sum(keep["count"][:n_classes])
