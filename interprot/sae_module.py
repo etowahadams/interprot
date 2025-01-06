@@ -1,8 +1,8 @@
+from functools import cache
+
 import esm
 import pytorch_lightning as pl
 import torch
-import torch.nn.functional as F
-from functools import cache
 from esm_wrapper import ESM2Model
 from sae_model import SparseAutoencoder, loss_fn
 from validation_metrics import diff_cross_entropy

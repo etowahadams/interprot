@@ -1,12 +1,10 @@
 import math
 from typing import Optional
 
-import numpy as np
-import polars as pl
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
-from transformers import PreTrainedModel, PreTrainedTokenizer
+
 
 class SparseAutoencoder(nn.Module):
     def __init__(

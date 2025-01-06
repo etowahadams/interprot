@@ -1,9 +1,10 @@
+import multiprocessing
+
 import polars as pr
 import pytorch_lightning as pl
 import torch
 from torch.utils.data import Dataset
 from utils import train_val_test_split
-import multiprocessing
 
 
 class PolarsDataset(Dataset):
