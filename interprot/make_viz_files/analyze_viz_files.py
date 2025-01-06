@@ -1,127 +1,42 @@
 import json
-import os
+from pathlib import Path
 
 import numpy as np
 import polars as pl
 from tqdm import tqdm
 
 
-# TODO: Update this def once precision fix is applied 
-def check_is_gapped(current_selection: list[float]) -> bool:
-    UPPER_THRESHOLD = 0.75
-    BOTTOM_THRESHOLD = 0.1
-    in_gap = False
-    for i in range(1, len(current_selection)):
-        if (
-            current_selection[i] < BOTTOM_THRESHOLD
-            and current_selection[i - 1] > UPPER_THRESHOLD
-        ):
-            in_gap = True
-        elif in_gap and current_selection[i] > UPPER_THRESHOLD:
-            return True
-    return False
-
-
-def longest_increasing_and_decreasing_stretch(
-    current_selection: list[float],
-) -> tuple[int, int]:
-    longest_increasing = 0
-    longest_decreasing = 0
-    cur_increasing = 0
-    cur_decreasing = 0
-    for i in range(1, len(current_selection)):
-        if current_selection[i] > current_selection[i - 1]:
-            cur_increasing += 1
-            cur_decreasing = 0
-        elif current_selection[i] < current_selection[i - 1]:
-            cur_decreasing += 1
-            cur_increasing = 0
-        else:
-            cur_decreasing = 0
-            cur_increasing = 0
-        longest_increasing = max(longest_increasing, cur_increasing)
-        longest_decreasing = max(longest_decreasing, cur_decreasing)
-    return longest_increasing, longest_decreasing
-
-
-def calculate_act_stats(tokens_acts_list: list[float]) -> float:
+def compute_all_feature_stats(viz_file_dir: Path, ouput_dir: Path, hidden_dim: int) -> None:
     """
-    Calculate the average length of the features in the given list of token activations.
+    Computes all feature stats and writes them to a parquet file. This is the main runner function
+
     Args:
-        tokens_acts_list: list of token activations
-    Returns:
-        stats: dictionary
+        viz_file_dir: Path to the directory containing the viz files. Expects that the viz files
+            have a certain structure, and are named with the SAE dimension as the filename.
+        output_dir: Path to the directory where the output parquet file will be written.
+        hidden_dim: The number of hidden dimensions in the SAE model.
+
     """
+    print("Computing sequence stats. This should take a few mins...")
+    # Calculate metrics about each sequence
+    seqeunce_stats = calculate_sequence_metrics(viz_file_dir)
 
-    contig_lens = []
-    contig_starts = []
-    max_within_contiguous = []
-    longest_increasing = []
-    longest_decreasing = []
-    gaps = []
-    len_gt_75 = []
-    cur_len = 0
-
-    def record_contig(i, cur_len):
-        contig_lens.append(cur_len)
-        current_section = tokens_acts_list[i - cur_len : i]
-        max_within_contiguous.append(np.max(current_section))
-        current_selection = tokens_acts_list[i - cur_len : i]
-        if not np.any(current_selection > 0.75):
-            gaps.append(False)
-        else:
-            gaps.append(check_is_gapped(current_selection))
-        len_gt_75.append(np.sum(current_selection > 0.75))
-        increasing, decreasing = longest_increasing_and_decreasing_stretch(
-            current_selection
-        )
-        longest_increasing.append(increasing)
-        longest_decreasing.append(decreasing)
-
-    for i, act in enumerate(tokens_acts_list):
-        if act == 0 and cur_len > 0:
-            record_contig(i, cur_len)
-            cur_len = 0
-        elif act > 0 and cur_len == 0:
-            contig_starts.append(i)
-            cur_len += 1
-        elif act > 0:
-            cur_len += 1
-
-    if cur_len > 0:
-        record_contig(len(tokens_acts_list), cur_len)
-
-    dist_between_starts = [
-        contig_starts[i] - contig_starts[i - 1] for i in range(1, len(contig_starts))
-    ]
-
-    stats = {
-        # the lengths of all of the non-zero contigs
-        "contig_lens": contig_lens,
-        # the number of non-zero contigs in the seqeunce
-        "n_contigs": len(contig_lens),
-        # the index of the contig starts
-        "contig_starts": contig_starts,
-        # the max activation within each contiguous section
-        "max_act": max_within_contiguous,
-        # whether each contig has a gap in it
-        "is_gapped": gaps,
-        # the distance between the starts of each contig
-        "dist_between_starts": dist_between_starts,
-        # percent of sequence has a non-zero activation
-        "percent_active": np.sum(tokens_acts_list > 0) / len(tokens_acts_list),
-        # length the values in the contig with activation greater than 0.75
-        "len_gt_75": len_gt_75,
-        # len of longest increasing stretch in each contig
-        "len_longest_increasing_stretch": longest_increasing,
-        # len longest decreasing stretch in each contig
-        "len_longest_decreasing_stretch": longest_decreasing,
-    }
-
-    return stats
+    print("Aggregating sequence stats to dim level...")
+    # Aggregate the sequence stats to get dim level stats
+    feature_stats = calulate_dim_metrics(seqeunce_stats, hidden_dim)
+    # Now the features are ready to be classified
+    feat_types = []
+    for row in feature_stats.rows(named=True):
+        feat_types.append(classify_into_type(row))
+    # add the feature type to the feature stats
+    summary_labels = feature_stats.with_columns(pl.Series("feat_type", feat_types))
+    # write the feature stats to a parquet file
+    print("Writing feature stats to parquet file")
+    output_file = ouput_dir / f"feature_stats_{hidden_dim}.parquet"
+    summary_labels.write_parquet(output_file)
 
 
-def calculate_sequence_metrics(json_dir):
+def calculate_sequence_metrics(json_dir: Path) -> pl.DataFrame:
     """
     Calculates stats for each sequence in each seqeunce file.
     Final dataframe will have one row for each sequence.
@@ -129,13 +44,17 @@ def calculate_sequence_metrics(json_dir):
     This function assumes that the viz files have a certain structure.
     """
     final_stats = []
-    for filename in tqdm(os.listdir(json_dir)):
-        if filename.endswith(".json"):
-            file_path = os.path.join(json_dir, filename)
-            with open(file_path, "r") as file:
-                data = json.load(file)
 
-        dim_name = filename.split(".")[0]
+    for file in tqdm(json_dir.iterdir()):
+        try: 
+            with open(file, "r") as f:
+                data = json.load(f)
+        except Exception as e:
+            print(f"Error reading file {file}")
+            print(e)
+            continue
+
+        dim_name = file.stem
 
         top_examples = data["ranges"]["0.75-1"]["examples"]
         freq_active = data["freq_active"]
@@ -151,8 +70,7 @@ def calculate_sequence_metrics(json_dir):
     final_stats = pl.DataFrame(final_stats)
     return final_stats
 
-
-def calulate_dim_metrics(final_stats: pl.DataFrame) -> pl.DataFrame:
+def calulate_dim_metrics(final_stats: pl.DataFrame, hidden_dim: int) -> pl.DataFrame:
     """
     Takes the output of calculate_sequence_metrics calculates dim level stats.
     Output is a df which each row is a different SAE dim
@@ -275,16 +193,164 @@ def calulate_dim_metrics(final_stats: pl.DataFrame) -> pl.DataFrame:
                 "n_seqs": len(data),
                 # the frequency that this feature fires across all sequences
                 "freq_active_global": data["freq_active"].mean(),
+                # is dead feature
+                "dead_latent": False,
             }
         )
 
+    # Identify dead latents
+    all_dims = set([str(i) for i in range(hidden_dim)])
+    summarized_dims = set(final_stats["dim"].unique())
+    dead_latents = all_dims - summarized_dims
+
+    for dim in dead_latents:
+        summary.append(
+            {
+                "dim": dim,
+                "mean_percent_active": 0,
+                "median_len_top_contig": 0,
+                "freq_contig_gt_75": 0,
+                "med_contig_length_gt_75": 0,
+                "freq_increase_gt_2_gt_75": 0,
+                "freq_decrease_gt_2_gt_75": 0,
+                "med_monotonic_stretch_len": 0,
+                "std_err_contig_len_gt_75": 0,
+                "freq_top_two_period": 0,
+                "freq_top_period": 0,
+                "top_period": 0,
+                "med_contigs_per_seq": 0,
+                "mean_contigs_per_seq_gt_75": 0,
+                "std_err_contig_len": 0,
+                "std_err_contig_len75": 0,
+                "is_top_gapped_gt_75": False,
+                "n_seqs": 0,
+                "freq_active_global": 0,
+                "dead_latent": True,
+            }
+        )
     summary = pl.DataFrame(summary)
     return summary
 
 
+# TODO: Update this to better gapping method 
+def check_is_gapped(current_selection: list[float]) -> bool:
+    UPPER_THRESHOLD = 0.75
+    BOTTOM_THRESHOLD = 0.1
+    in_gap = False
+    for i in range(1, len(current_selection)):
+        if (
+            current_selection[i] < BOTTOM_THRESHOLD
+            and current_selection[i - 1] > UPPER_THRESHOLD
+        ):
+            in_gap = True
+        elif in_gap and current_selection[i] > UPPER_THRESHOLD:
+            return True
+    return False
+
+
+def longest_increasing_and_decreasing_stretch(
+    current_selection: list[float],
+) -> tuple[int, int]:
+    longest_increasing = 0
+    longest_decreasing = 0
+    cur_increasing = 0
+    cur_decreasing = 0
+    for i in range(1, len(current_selection)):
+        if current_selection[i] > current_selection[i - 1]:
+            cur_increasing += 1
+            cur_decreasing = 0
+        elif current_selection[i] < current_selection[i - 1]:
+            cur_decreasing += 1
+            cur_increasing = 0
+        else:
+            cur_decreasing = 0
+            cur_increasing = 0
+        longest_increasing = max(longest_increasing, cur_increasing)
+        longest_decreasing = max(longest_decreasing, cur_decreasing)
+    return longest_increasing, longest_decreasing
+
+
+def calculate_act_stats(tokens_acts_list: list[float]) -> float:
+    """
+    Calculate the average length of the features in the given list of token activations.
+    Args:
+        tokens_acts_list: list of token activations
+    Returns:
+        stats: dictionary
+    """
+
+    contig_lens = []
+    contig_starts = []
+    max_within_contiguous = []
+    longest_increasing = []
+    longest_decreasing = []
+    gaps = []
+    len_gt_75 = []
+    cur_len = 0
+
+    def record_contig(i, cur_len):
+        contig_lens.append(cur_len)
+        current_section = tokens_acts_list[i - cur_len : i]
+        max_within_contiguous.append(np.max(current_section))
+        current_selection = tokens_acts_list[i - cur_len : i]
+        if not np.any(current_selection > 0.75):
+            gaps.append(False)
+        else:
+            gaps.append(check_is_gapped(current_selection))
+        len_gt_75.append(np.sum(current_selection > 0.75))
+        increasing, decreasing = longest_increasing_and_decreasing_stretch(
+            current_selection
+        )
+        longest_increasing.append(increasing)
+        longest_decreasing.append(decreasing)
+
+    for i, act in enumerate(tokens_acts_list):
+        if act == 0 and cur_len > 0:
+            record_contig(i, cur_len)
+            cur_len = 0
+        elif act > 0 and cur_len == 0:
+            contig_starts.append(i)
+            cur_len += 1
+        elif act > 0:
+            cur_len += 1
+
+    if cur_len > 0:
+        record_contig(len(tokens_acts_list), cur_len)
+
+    dist_between_starts = [
+        contig_starts[i] - contig_starts[i - 1] for i in range(1, len(contig_starts))
+    ]
+
+    stats = {
+        # the lengths of all of the non-zero contigs
+        "contig_lens": contig_lens,
+        # the number of non-zero contigs in the seqeunce
+        "n_contigs": len(contig_lens),
+        # the index of the contig starts
+        "contig_starts": contig_starts,
+        # the max activation within each contiguous section
+        "max_act": max_within_contiguous,
+        # whether each contig has a gap in it
+        "is_gapped": gaps,
+        # the distance between the starts of each contig
+        "dist_between_starts": dist_between_starts,
+        # percent of sequence has a non-zero activation
+        "percent_active": np.sum(tokens_acts_list > 0) / len(tokens_acts_list),
+        # length the values in the contig with activation greater than 0.75
+        "len_gt_75": len_gt_75,
+        # len of longest increasing stretch in each contig
+        "len_longest_increasing_stretch": longest_increasing,
+        # len longest decreasing stretch in each contig
+        "len_longest_decreasing_stretch": longest_decreasing,
+    }
+
+    return stats
+
 def classify_into_type(row):
     if row["n_seqs"] < 5:
         return "not enough data"
+    if row['dead_latent']:
+        return 'dead latent'
 
     has_consistant_starts = row["freq_top_two_period"] > 0.5
     has_large_number_of_contigs = row["med_contigs_per_seq"] > 10
@@ -303,17 +369,6 @@ def classify_into_type(row):
             return "long motif (50-300)"
 
     if row["mean_percent_active"] > 0.8:
-        return "highly active"
+        return "whole"
 
     return "other"
-
-
-def main():
-    INPUT_DIR = ""
-    seqeunce_stats = calculate_sequence_metrics(INPUT_DIR)
-    feature_stats = calulate_dim_metrics(seqeunce_stats)
-    feat_types = []
-    for row in feature_stats.rows(named=True):
-        feat_types.append(classify_into_type(row))
-    summary_labels = feature_stats.with_columns(pl.Series("feat_type", feat_types))
-    summary_labels.write_parquet("feature_stats.parquet")
