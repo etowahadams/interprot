@@ -229,9 +229,9 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
         group: "amino acid identity",
       },
       {
-        name: "aspartic acid",
+        name: "glycine",
         dim: 3830,
-        desc: "Activates on aspartic acid residues",
+        desc: "Activates on glycine residues",
         group: "amino acid identity",
       },
       {
