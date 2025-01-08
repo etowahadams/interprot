@@ -39,7 +39,10 @@ def compute_family_specifc_features(
     df = df.with_columns(
         pl.col(class_list_col).str.strip_chars(";").str.split(";").alias(class_list_col)
     )
-    data = np.load(top_acts_npy)
+
+    print('Reading top activations')
+    with np.load(top_acts_npy) as data:
+        data = data["all_seqs_max_act"]
 
     try:
         assert data.shape[0] == total_dims

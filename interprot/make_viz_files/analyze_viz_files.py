@@ -32,7 +32,7 @@ def compute_all_feature_stats(viz_file_dir: Path, ouput_dir: Path, hidden_dim: i
     summary_labels = feature_stats.with_columns(pl.Series("feat_type", feat_types))
     # write the feature stats to a parquet file
     print("Writing feature stats to parquet file")
-    output_file = ouput_dir / f"feature_stats_{hidden_dim}.parquet"
+    output_file = ouput_dir / f"feature_stats.parquet"
     summary_labels.write_parquet(output_file)
 
 
