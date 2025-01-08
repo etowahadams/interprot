@@ -2,6 +2,7 @@ import heapq
 import json
 import os
 import re
+from pathlib import Path
 
 import click
 import numpy as np
@@ -14,7 +15,6 @@ from transformers import AutoTokenizer, EsmModel
 from interprot.sae_model import SparseAutoencoder
 from interprot.utils import get_layer_activations
 
-OUTPUT_ROOT_DIR = "viz_files"
 NUM_SEQS_PER_DIM = 12
 
 
@@ -39,11 +39,18 @@ def get_esm_layer_acts(
     required=True,
     help="Path to the sequences file containing AlphaFoldDB IDs",
 )
-def make_viz_files(checkpoint_files: list[str], sequences_file: str):
+@click.option(
+    "--output-dir",
+    type=click.Path(exists=True, dir_okay=True),
+    required=True,
+    help="Path to the sequences file containing AlphaFoldDB IDs",
+)
+def make_viz_files(checkpoint_files: list[str], sequences_file: str, output_dir: Path):
     """
     Generate visualization files for SAE latents for multiple checkpoint files.
     """
-    os.makedirs(OUTPUT_ROOT_DIR, exist_ok=True)
+    output_dir = Path(output_dir)
+    os.makedirs(output_dir, exist_ok=True)
 
     for checkpoint_file in checkpoint_files:
         click.echo(f"Generating visualization files for {checkpoint_file}")
@@ -104,8 +111,8 @@ def make_viz_files(checkpoint_files: list[str], sequences_file: str):
                 torch.cuda.empty_cache()
 
         # Save intermediate results
-        with open(os.path.join(OUTPUT_ROOT_DIR, "all_seqs_max_act.npy"), "wb") as f:
-            np.save(f, all_seqs_max_act)
+        with open(output_dir / "max_acts.npz", "wb") as f:
+            np.savez(f, all_seqs_max_act=all_seqs_max_act)
 
         hidden_dim_to_seqs: dict[int, dict] = {dim: {} for dim in range(sae_dim)}
 
@@ -146,10 +153,10 @@ def make_viz_files(checkpoint_files: list[str], sequences_file: str):
             if not hidden_dim_to_seqs[dim]:
                 print(f"Skipping dimension {dim} as it has no sequences")
                 continue
-            write_viz_file(hidden_dim_to_seqs[dim], dim, all_acts, df, range_names)
+            write_viz_file(hidden_dim_to_seqs[dim], dim, all_acts, df, range_names, output_dir)
 
 
-def write_viz_file(dim_info, dim, all_acts, df, range_names):
+def write_viz_file(dim_info, dim, all_acts, df, range_names, output_dir: Path):
     viz_file = {"ranges": {}}
     # Write how common the dimension is
     if "freq_active" in dim_info:
@@ -193,7 +200,8 @@ def write_viz_file(dim_info, dim, all_acts, df, range_names):
 
         viz_file["ranges"][range_name] = range_examples
 
-    with open(os.path.join(OUTPUT_ROOT_DIR, f"{dim}.json"), "w") as f:
+    out_path = output_dir / f"{dim}.json"
+    with open(out_path, "w") as f:
         json.dump(viz_file, f)
 
 
