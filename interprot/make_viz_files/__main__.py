@@ -3,6 +3,7 @@ import json
 import os
 import re
 from pathlib import Path
+from typing import Any
 
 import click
 import numpy as np
@@ -43,7 +44,7 @@ def get_esm_layer_acts(
     "--output-dir",
     type=click.Path(exists=True, dir_okay=True),
     required=True,
-    help="Path to the sequences file containing AlphaFoldDB IDs",
+    help="Path to the output directory in which the JSON files will be written",
 )
 def make_viz_files(checkpoint_files: list[str], sequences_file: str, output_dir: Path):
     """
@@ -157,7 +158,7 @@ def make_viz_files(checkpoint_files: list[str], sequences_file: str, output_dir:
 
 
 def write_viz_file(dim_info, dim, all_acts, df, range_names, output_dir: Path):
-    viz_file = {"ranges": {}}
+    viz_file: dict[str, Any] = {"ranges": {}}
     # Write how common the dimension is
     if "freq_active" in dim_info:
         viz_file["freq_active"] = dim_info["freq_active"]
@@ -171,7 +172,7 @@ def write_viz_file(dim_info, dim, all_acts, df, range_names, output_dir: Path):
     for range_name in range_names:
         if range_name not in dim_info:
             continue
-        range_examples = {
+        range_examples: dict[str, list] = {
             "examples": [],
         }
         top_indices = dim_info[range_name]["indices"]

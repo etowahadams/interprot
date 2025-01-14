@@ -9,7 +9,7 @@ export type CuratedFeature = {
 };
 
 export type SAEConfig = {
-  baseUrl: string;
+  storagePath: string;
   description: string;
   numHiddenDims: number;
   plmLayer: number;
@@ -25,10 +25,12 @@ export const CONTRIBUTORS: Record<string, string> = {
   "James Michael Krieger": "http://github.com/jamesmkrieger",
 };
 
+export const STORAGE_ROOT_URL =
+  "https://raw.githubusercontent.com/liambai/plm-interp-viz-data/refs/heads/main";
+
 export const SAE_CONFIGS: Record<string, SAEConfig> = {
   "SAE4096-L24": {
-    baseUrl:
-      "https://raw.githubusercontent.com/liambai/plm-interp-viz-data/refs/heads/main/esm2_plm1280_l24_sae4096_100Kseqs/",
+    storagePath: "esm2_plm1280_l24_sae4096_100Kseqs",
     description:
       "This SAE was trained on layer 24 of [ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D) using sequences from [UniRef50](https://www.uniprot.org/help/uniref) and has 4096 hidden dimensions. Click on a feature below to visualize its activation pattern.",
     numHiddenDims: 4096,
@@ -412,9 +414,17 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
     defaultDim: 4000,
     supportsCustomSequence: true,
   },
+  // "SAE4096-L33": {
+  //   storagePath: "esm2_plm1280_l33_sae4096_aux640",
+  //   description: "",
+  //   numHiddenDims: 4096,
+  //   plmLayer: 33,
+  //   defaultDim: 0,
+  //   supportsCustomSequence: false,
+  //   curated: [],
+  // },
   "SAE4096-L24-ab": {
-    baseUrl:
-      "https://raw.githubusercontent.com/liambai/plm-interp-viz-data/refs/heads/main/esm2_plm1280_l24_sae4096_k128_auxk512_antibody_seqs/",
+    storagePath: "esm2_plm1280_l24_sae4096_k128_auxk512_antibody_seqs",
     description:
       "This SAE was trained on layer 24 of [ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D) using antibody sequences from [PLAbDab](https://opig.stats.ox.ac.uk/webapps/plabdab/) and has 4096 hidden dimensions. Click on a feature below to visualize its activation pattern.",
     numHiddenDims: 4096,
@@ -576,5 +586,50 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
         group: "amino acid position",
       },
     ],
+  },
+  "SAE8192-L24-K16": {
+    storagePath: "k_sweep/esm2_plm1280_l24_sae8192_k16_auxk640",
+    description: "",
+    numHiddenDims: 8192,
+    plmLayer: 24,
+    defaultDim: 0,
+    supportsCustomSequence: false,
+    curated: [],
+  },
+  "SAE8192-L24-K32": {
+    storagePath: "k_sweep/esm2_plm1280_l24_sae8192_k32_auxk640",
+    description: "",
+    numHiddenDims: 8192,
+    plmLayer: 24,
+    defaultDim: 0,
+    supportsCustomSequence: false,
+    curated: [],
+  },
+  "SAE8192-L24-K64": {
+    storagePath: "k_sweep/esm2_plm1280_l24_sae8192_k64_auxk640",
+    description: "",
+    numHiddenDims: 8192,
+    plmLayer: 24,
+    defaultDim: 0,
+    supportsCustomSequence: false,
+    curated: [],
+  },
+  "SAE8192-L24-K128": {
+    storagePath: "k_sweep/esm2_plm1280_l24_sae8192_k128_auxk640",
+    description: "",
+    numHiddenDims: 8192,
+    plmLayer: 24,
+    defaultDim: 0,
+    supportsCustomSequence: false,
+    curated: [],
+  },
+  "SAE8192-L24-K256": {
+    storagePath: "k_sweep/esm2_plm1280_l24_sae8192_k256_auxk640",
+    description: "",
+    numHiddenDims: 8192,
+    plmLayer: 24,
+    defaultDim: 0,
+    supportsCustomSequence: false,
+    curated: [],
   },
 };

@@ -241,7 +241,7 @@ export default function SeqsViewer({ seqs, title }: SeqsViewerProps) {
                     <br />
                     <span className="font-semibold">3Di:</span>{" "}
                     <Markdown>
-                      Structural tokens describing geometric conformation, invented for
+                      Structural tokens describing geometric conformation from
                       [Foldseek](https://www.nature.com/articles/s41587-023-01773-0)
                     </Markdown>
                   </p>
