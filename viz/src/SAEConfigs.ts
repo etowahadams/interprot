@@ -414,15 +414,15 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
     defaultDim: 4000,
     supportsCustomSequence: true,
   },
-  // "SAE4096-L33": {
-  //   storagePath: "esm2_plm1280_l33_sae4096_aux640",
-  //   description: "",
-  //   numHiddenDims: 4096,
-  //   plmLayer: 33,
-  //   defaultDim: 0,
-  //   supportsCustomSequence: false,
-  //   curated: [],
-  // },
+  "SAE4096-L33": {
+    storagePath: "esm2_plm1280_l33_sae4096_aux640",
+    description: "",
+    numHiddenDims: 4096,
+    plmLayer: 33,
+    defaultDim: 0,
+    supportsCustomSequence: false,
+    curated: [],
+  },
   "SAE4096-L24-ab": {
     storagePath: "esm2_plm1280_l24_sae4096_k128_auxk512_antibody_seqs",
     description:
