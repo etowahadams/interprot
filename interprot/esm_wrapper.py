@@ -1,10 +1,10 @@
-import pytorch_lightning as pl
+from lightning import LightningModule
 import torch
 import torch.nn as nn
 from esm.modules import ESM1bLayerNorm, RobertaLMHead, TransformerLayer
 
 
-class ESM2Model(pl.LightningModule):
+class ESM2Model(LightningModule):
     def __init__(self, num_layers, embed_dim, attention_heads, alphabet, token_dropout):
         super().__init__()
         self.num_layers = num_layers
@@ -71,7 +71,7 @@ class ESM2Model(pl.LightningModule):
         if isinstance(input, str):
             tokens = self.compose_input([("protein", input)])
         elif isinstance(input, list):
-            tokens = self.compose_input([("protein", seq) for seq in input])
+            tokens = self.compose_inpuwt([("protein", seq) for seq in input])
         else:
             tokens = input
 
