@@ -7,7 +7,7 @@ import proteinEmoji from "./protein.png";
 
 import { SAEContext } from "./SAEContext";
 import { NUM_SEQS_TO_DISPLAY } from "./config";
-import { CONTRIBUTORS } from "./SAEConfigs";
+import { CONTRIBUTORS, STORAGE_ROOT_URL } from "./SAEConfigs";
 import SeqsViewer, { SeqWithSAEActs } from "./components/SeqsViewer";
 import {
   Accordion,
@@ -16,6 +16,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import Markdown from "@/components/Markdown";
+import { Info } from "lucide-react";
 
 const actRanges: [number, number][] = [
   [0.75, 1],
@@ -80,7 +81,7 @@ const SAEVisualizerPage: React.FC = () => {
   const [isDeadLatent, setIsDeadLatent] = useState(false);
 
   useEffect(() => {
-    const fileURL = `${SAEConfig.baseUrl}${feature}.json`;
+    const fileURL = `${STORAGE_ROOT_URL}/${SAEConfig.storagePath}/${feature}.json`;
 
     const loadData = async () => {
       setFeatureStats(undefined);
@@ -145,7 +146,19 @@ const SAEVisualizerPage: React.FC = () => {
         ) : (
           <div className="mt-3">
             <Markdown>{descStr}</Markdown>
-            {SAEConfig?.supportsCustomSequence && <CustomSeqPlayground />}
+            {SAEConfig?.supportsCustomSequence ? (
+              <CustomSeqPlayground />
+            ) : (
+              <div className="mb-10 mt-10 p-4 border-2 border-gray-200 rounded-lg bg-gray-50 flex items-center gap-4">
+                <div className="text-amber-600">
+                  <Info className="h-6 w-6" />
+                </div>
+                <p className="text-gray-700">
+                  Some of our SAEs support custom sequence inputs. This one currently does not. Try
+                  a different model in the model dropdown to search and steer your own sequence.
+                </p>
+              </div>
+            )}
             {isLoading ? (
               <div className="flex items-center justify-center w-full mt-5">
                 <img
