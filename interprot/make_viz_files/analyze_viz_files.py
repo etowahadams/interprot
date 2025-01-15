@@ -347,11 +347,11 @@ def calculate_act_stats(tokens_acts_list: list[float]) -> float:
     return stats
 
 def classify_into_type(row):
-    if row["n_seqs"] < 5:
-        return "not enough data"
     if row['dead_latent']:
         return 'dead latent'
-
+    if row["n_seqs"] < 5:
+        return "not enough data"
+    
     has_consistant_starts = row["freq_top_two_period"] > 0.5
     has_large_number_of_contigs = row["med_contigs_per_seq"] > 10
     not_super_long_contigs = row["median_len_top_contig"] < 10
@@ -360,7 +360,7 @@ def classify_into_type(row):
 
     if row["med_contig_length_gt_75"] == 1:
         return "point"
-    if row["freq_contig_gt_75"] > 0.1 and row["mean_percent_active"] < 0.8:
+    if row["mean_percent_active"] < 0.8:
         if row["median_len_top_contig"] < 20:
             return "short motif (1-20)"
         if row["median_len_top_contig"] < 50:
