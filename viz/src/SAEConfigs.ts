@@ -415,7 +415,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
     supportsCustomSequence: true,
   },
   "SAE4096-L8": {
-    storagePath: "4096_layer_sweep/esm2_plm1280_l8_sae4096_aux640",
+    storagePath: "4096_layer_sweep/esm2_plm1280_l8_sae4096_k64_auxk640",
     description: "",
     numHiddenDims: 4096,
     plmLayer: 8,
@@ -424,7 +424,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
     curated: [],
   },
   "SAE4096-L12": {
-    storagePath: "4096_layer_sweep/esm2_plm1280_l12_sae4096_aux640",
+    storagePath: "4096_layer_sweep/esm2_plm1280_l12_sae4096_k64_auxk640",
     description: "",
     numHiddenDims: 4096,
     plmLayer: 12,
@@ -433,7 +433,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
     curated: [],
   },
   "SAE4096-L16": {
-    storagePath: "4096_layer_sweep/esm2_plm1280_l16_sae4096_aux640",
+    storagePath: "4096_layer_sweep/esm2_plm1280_l16_sae4096_k64_auxk640",
     description: "",
     numHiddenDims: 4096,
     plmLayer: 16,
@@ -442,7 +442,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
     curated: [],
   },
   "SAE4096-L28": {
-    storagePath: "4096_layer_sweep/esm2_plm1280_l28_sae4096_aux640",
+    storagePath: "4096_layer_sweep/esm2_plm1280_l28_sae4096_k64_auxk640",
     description: "",
     numHiddenDims: 4096,
     plmLayer: 28,
@@ -451,7 +451,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
     curated: [],
   },
   "SAE4096-L32": {
-    storagePath: "4096_layer_sweep/esm2_plm1280_l32_sae4096_aux640",
+    storagePath: "4096_layer_sweep/esm2_plm1280_l32_sae4096_k64_auxk640",
     description: "",
     numHiddenDims: 4096,
     plmLayer: 32,
@@ -460,7 +460,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
     curated: [],
   },
   "SAE4096-L33": {
-    storagePath: "4096_layer_sweep/esm2_plm1280_l33_sae4096_aux640",
+    storagePath: "4096_layer_sweep/esm2_plm1280_l33_sae4096_k64_auxk640",
     description: "",
     numHiddenDims: 4096,
     plmLayer: 33,
