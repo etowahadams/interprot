@@ -16,7 +16,8 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import Markdown from "@/components/Markdown";
-import { Info } from "lucide-react";
+import { Info, HelpCircle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const actRanges: [number, number][] = [
   [0.75, 1],
@@ -119,7 +120,21 @@ const SAEVisualizerPage: React.FC = () => {
         <div className="flex justify-between items-center mt-3 mb-3">
           <h1 className="text-3xl font-semibold md:mt-0 mt-16">Feature {feature}</h1>
           {featureStats && (
-            <div>Activation frequency: {(featureStats.freq_active * 100).toFixed(2)}%</div>
+            <div className="flex items-center gap-2">
+              <span>Activation frequency: {(featureStats.freq_active * 100).toFixed(2)}% </span>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger>
+                    <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-[300px]">
+                    We precomputed SAE activations on 75,000 sequences from SwissProt clustered at
+                    30% sequence identity. This feature activated on this percentage of those
+                    sequences.
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           )}
         </div>
         <div>
