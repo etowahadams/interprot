@@ -37,5 +37,3 @@ Or you can install this repo as a package and run it from any directory:
 RUN pip install -e .
 make_viz_files --checkpoint-files <path to checkpoint> --output-dir <path to output>
 ```
-
-test build
