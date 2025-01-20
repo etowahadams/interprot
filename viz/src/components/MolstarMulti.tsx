@@ -1,7 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import { DefaultPluginSpec } from "molstar/lib/mol-plugin/spec";
 import { PluginContext } from "molstar/lib/mol-plugin/context";
+import { ColorNames } from "molstar/lib/mol-util/color/names";
+import { exportHierarchy } from "./export";
 import { CustomElementProperty } from "molstar/lib/mol-model-props/common/custom-element-property";
+import { PluginCommands } from "molstar/lib/mol-plugin/commands";
 import { Model, ElementIndex } from "molstar/lib/mol-model/structure";
 import { Color } from "molstar/lib/mol-util/color";
 import proteinEmoji from "../protein.png";
@@ -11,11 +14,12 @@ import { SeqWithSAEActs } from "./SeqsViewer";
 
 interface MolstarViewerProps {
   proteins: SeqWithSAEActs[];
+  maxActivation: number;
 }
 
 const PROTEIN_CANVAS_SIZE = 400;
 
-const MolstarMulti: React.FC<MolstarViewerProps> = ({ proteins }) => {
+const MolstarMulti: React.FC<MolstarViewerProps> = ({ proteins, maxActivation }) => {
   const [proteinImages, setProteinImages] = useState<(string | null)[]>(
     Array(proteins.length).fill(null)
   );
@@ -64,6 +68,12 @@ const MolstarMulti: React.FC<MolstarViewerProps> = ({ proteins }) => {
     const plugin = new PluginContext(spec);
     await plugin.init();
     plugin.initViewer(canvas, element);
+    const renderer = plugin.canvas3d!.props.renderer;
+    PluginCommands.Canvas3D.SetSettings(plugin, {
+      settings: {
+        renderer: { ...renderer, backgroundColor: ColorNames.white /* or: 0xff0000 as Color */ },
+      },
+    });
 
     return plugin;
   };
@@ -98,6 +108,28 @@ const MolstarMulti: React.FC<MolstarViewerProps> = ({ proteins }) => {
           });
         }
       });
+
+      const maxValue = Math.max(...protein.sae_acts);
+      const normalizedActs = protein.sae_acts.map((act) => act / maxActivation);
+      const actColors = protein.sae_acts.map((act) => {
+        const color = redColorMapRGB(act, maxActivation);
+        return color;
+      });
+      const actColorsHex = actColors.map((color) => {
+        return "#" + color.map((c) => c.toString(16).padStart(2, "0")).join("");
+      });
+      let colorScript = "";
+      colorScript += `alphafold fetch ${protein.alphafold_id}\n set bg_color white \ngraphics silhouettes on \nlighting flat\npreset cylinders\n`;
+      actColorsHex.forEach((color, i) => {
+        colorScript += `color /A:${i + 1} ${color}\n`;
+        if (normalizedActs[i] > 0.1) {
+          colorScript += `show /A:${i + 1}\n`;
+        }
+      });
+      if (isInteractive) {
+        console.log(colorScript);
+        console.log(protein.alphafold_id);
+      }
 
       if (!isInteractive) {
         await new Promise((resolve) => setTimeout(resolve, 100));
@@ -146,6 +178,8 @@ const MolstarMulti: React.FC<MolstarViewerProps> = ({ proteins }) => {
       const plugin = await initViewer(viewerContainer);
       activePluginsRef.current.set(index, plugin);
       await loadStructure(plugin, proteins[index], index, true);
+
+      // exportHierarchy(plugin, { format: "cif" });
       setActiveViewerIndices((prev) => {
         const newSet = new Set(prev);
         newSet.add(index);

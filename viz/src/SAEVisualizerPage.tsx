@@ -69,13 +69,14 @@ const processData = (data: VizFile) => {
     top_pfam: data.top_pfam,
   };
 
-  return { rangeData: processedData, featureStats };
+  return { rangeData: processedData, featureStats, maxAct: data.max_act };
 };
 
 const SAEVisualizerPage: React.FC = () => {
   const { feature, model, SAEConfig } = useContext(SAEContext);
   const dimToCuratedMap = new Map(SAEConfig?.curated?.map((i) => [i.dim, i]) || []);
   const [featureStats, setFeatureStats] = useState<FeatureStats>();
+  const [maxActivation, setMaxActivation] = useState<number>(0);
 
   const [rangeData, setRangeData] = useState<{ [key: string]: SeqWithSAEActs[] }>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -91,9 +92,10 @@ const SAEVisualizerPage: React.FC = () => {
 
       try {
         const data = await fetchData(fileURL);
-        const { rangeData, featureStats } = processData(data);
+        const { rangeData, featureStats, maxAct } = processData(data);
         setRangeData(rangeData);
         setFeatureStats(featureStats);
+        setMaxActivation(maxAct);
       } catch {
         setIsDeadLatent(true);
         setRangeData({});
@@ -187,7 +189,7 @@ const SAEVisualizerPage: React.FC = () => {
                 {!isLoading && (
                   <>
                     <SeqsViewer seqs={rangeData[rangeNames[0]]} title="Top activating sequences" />
-                    <MolstarMulti proteins={rangeData[rangeNames[0]]} />
+                    <MolstarMulti proteins={rangeData[rangeNames[0]]} maxActivation={maxActivation}/>
                     <h2 className="text-2xl font-semibold mt-6">Lower activating sequences</h2>
                     <Accordion type="multiple" className="w-full mt-6">
                       {rangeNames.slice(1).map(
@@ -199,7 +201,7 @@ const SAEVisualizerPage: React.FC = () => {
                               </AccordionTrigger>
                               <AccordionContent>
                                 <SeqsViewer seqs={rangeData[rangeName]} />
-                                <MolstarMulti proteins={rangeData[rangeName]} />
+                                <MolstarMulti proteins={rangeData[rangeName]}  maxActivation={maxActivation}/>
                               </AccordionContent>
                             </AccordionItem>
                           )

@@ -7,8 +7,12 @@ export function redColorMapRGB(value: number, maxValue: number) {
   // Normalize value between 0 and 1
   const normalized = value / maxValue;
 
+  if (normalized < 0.1) {
+    return [75, 102, 159];
+  }
+
   // Interpolate between white (255, 255, 255) and red (255, 0, 0)
-  const red = 255;
+  const red = 245;
   const green = Math.round(255 * (1 - normalized));
   const blue = Math.round(255 * (1 - normalized));
   return [red, green, blue];
