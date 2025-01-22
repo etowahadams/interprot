@@ -6,6 +6,10 @@ import { Copy, Check, HelpCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Markdown from "./Markdown";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Pie, PieChart, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { PieChartIcon } from "lucide-react";
 
 // NOTE(liam): This component is written by Cursor pretty much entirely.
 
@@ -212,6 +216,53 @@ export default function SeqsViewer({ seqs, title }: SeqsViewerProps) {
     setTimeout(() => setCopiedId(null), 1000);
   }, []);
 
+  // Add this new function to calculate amino acid distribution
+  const getAminoAcidDistribution = useCallback(() => {
+    const distribution: { [key: string]: number } = {};
+
+    alignedSeqs.forEach((seq) => {
+      const sequence = getSourceSequence(seq);
+      sequence.split("").forEach((char, index) => {
+        // Only count residues with nonzero activations and that aren't gaps
+        if (char !== "-" && seq.sae_acts[index] && seq.sae_acts[index] > 0) {
+          distribution[char] = (distribution[char] || 0) + 1;
+        }
+      });
+    });
+
+    // Calculate total for percentage
+    const total = Object.values(distribution).reduce((sum, count) => sum + count, 0);
+
+    return Object.entries(distribution)
+      .sort(([, a], [, b]) => b - a)
+      .map(([aa, count]) => ({
+        name: aa,
+        value: count,
+        percentage: ((count / total) * 100).toFixed(1),
+        fill: `hsl(${Math.random() * 360}, 50%, 50%)`,
+      }));
+  }, [alignedSeqs, getSourceSequence]);
+
+  // Add this new function to calculate total counts
+  const getActivatedResidueStats = useCallback(() => {
+    let activatedCount = 0;
+    let totalCount = 0;
+
+    alignedSeqs.forEach((seq) => {
+      const sequence = getSourceSequence(seq);
+      sequence.split("").forEach((char, index) => {
+        if (char !== "-") {
+          totalCount++;
+          if (seq.sae_acts[index] && seq.sae_acts[index] > 0) {
+            activatedCount++;
+          }
+        }
+      });
+    });
+
+    return { activatedCount, totalCount };
+  }, [alignedSeqs, getSourceSequence]);
+
   return (
     <>
       <div className="flex items-center gap-4 mt-2 justify-between flex-wrap">
@@ -266,6 +317,84 @@ export default function SeqsViewer({ seqs, title }: SeqsViewerProps) {
               <div>MSA</div>
             </ToggleGroupItem>
           </ToggleGroup>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="hover:bg-muted p-2 rounded border flex items-center gap-2">
+                <PieChartIcon className="h-5 w-5" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[600px]">
+              <Card className="border-0 shadow-none">
+                <CardHeader className="px-2 pt-2">
+                  <CardTitle className="text-md">
+                    Amino acid distribution among activated residues in displayed sequences
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-2">
+                  <div className="h-[350px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <RechartsTooltip
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const data = payload[0].payload;
+                              return (
+                                <div className="bg-popover text-popover-foreground rounded-md border px-3 py-1.5">
+                                  <p className="font-medium">{`${data.name}: ${data.value}`}</p>
+                                  <p className="text-sm text-muted-foreground">{`${data.percentage}%`}</p>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle">
+                          {(() => {
+                            const { activatedCount, totalCount } = getActivatedResidueStats();
+                            return [
+                              <tspan
+                                key="count"
+                                x="50%"
+                                y="50%"
+                                className="fill-foreground text-2xl font-bold"
+                              >
+                                {`${activatedCount}/${totalCount}`}
+                              </tspan>,
+                              <tspan
+                                key="label"
+                                x="50%"
+                                y="50%"
+                                dy="24"
+                                className="fill-muted-foreground"
+                              >
+                                activated residues
+                              </tspan>,
+                            ];
+                          })()}
+                        </text>
+                        <Pie
+                          data={getAminoAcidDistribution()}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={90}
+                          outerRadius={140}
+                          label={({ name, percent, index }) => {
+                            if (index < 3) {
+                              return `${name} (${(percent * 100).toFixed(1)}%)`;
+                            }
+                            return null;
+                          }}
+                          labelLine={false}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
       <div
