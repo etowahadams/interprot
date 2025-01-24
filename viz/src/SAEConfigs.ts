@@ -414,6 +414,15 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
     defaultDim: 4000,
     supportsCustomSequence: true,
   },
+  "SAE4096-L4": {
+    storagePath: "4096_layer_sweep/esm2_plm1280_l4_sae4096_k64_auxk640",
+    description: "",
+    numHiddenDims: 4096,
+    plmLayer: 4,
+    defaultDim: 0,
+    supportsCustomSequence: false,
+    curated: [],
+  },
   "SAE4096-L8": {
     storagePath: "4096_layer_sweep/esm2_plm1280_l8_sae4096_k64_auxk640",
     description: "",
