@@ -90,6 +90,6 @@ export async function getSAEAllDimsActivations(
 }
 
 export async function getSteeredSequence(input: RunpodSteeringInput): Promise<string> {
-  const data = await postRunpod(input, "fic4o6m6sq9mla");
+  const data = await postRunpod(input, "ok5xk5v1375qpf");
   return data.steered_sequence;
 }
