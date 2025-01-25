@@ -1,5 +1,7 @@
 FROM nvidia/cuda:11.8.0-base-ubuntu22.04
 
+RUN echo "Building image for steer_feature endpoint"
+
 RUN apt-get update && apt-get install -y \
     wget \
     python3-pip \
