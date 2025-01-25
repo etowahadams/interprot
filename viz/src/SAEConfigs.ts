@@ -420,7 +420,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
     numHiddenDims: 4096,
     plmLayer: 4,
     defaultDim: 0,
-    supportsCustomSequence: false,
+    supportsCustomSequence: true,
     curated: [],
   },
   "SAE4096-L8": {
@@ -429,7 +429,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
     numHiddenDims: 4096,
     plmLayer: 8,
     defaultDim: 0,
-    supportsCustomSequence: false,
+    supportsCustomSequence: true,
     curated: [],
   },
   "SAE4096-L12": {
@@ -438,7 +438,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
     numHiddenDims: 4096,
     plmLayer: 12,
     defaultDim: 0,
-    supportsCustomSequence: false,
+    supportsCustomSequence: true,
     curated: [],
   },
   "SAE4096-L16": {
@@ -447,7 +447,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
     numHiddenDims: 4096,
     plmLayer: 16,
     defaultDim: 0,
-    supportsCustomSequence: false,
+    supportsCustomSequence: true,
     curated: [],
   },
   "SAE4096-L20": {
@@ -456,7 +456,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
     numHiddenDims: 4096,
     plmLayer: 20,
     defaultDim: 0,
-    supportsCustomSequence: false,
+    supportsCustomSequence: true,
     curated: [],
   },
   "SAE4096-L24-v2": {
@@ -466,7 +466,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
     numHiddenDims: 4096,
     plmLayer: 24,
     defaultDim: 0,
-    supportsCustomSequence: false,
+    supportsCustomSequence: true,
     curated: [],
   },
   "SAE4096-L28": {
@@ -475,7 +475,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
     numHiddenDims: 4096,
     plmLayer: 28,
     defaultDim: 0,
-    supportsCustomSequence: false,
+    supportsCustomSequence: true,
     curated: [],
   },
   "SAE4096-L32": {
@@ -484,7 +484,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
     numHiddenDims: 4096,
     plmLayer: 32,
     defaultDim: 0,
-    supportsCustomSequence: false,
+    supportsCustomSequence: true,
     curated: [],
   },
   "SAE4096-L33": {
@@ -493,7 +493,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
     numHiddenDims: 4096,
     plmLayer: 33,
     defaultDim: 0,
-    supportsCustomSequence: false,
+    supportsCustomSequence: true,
     curated: [],
   },
   "SAE4096-L24-ab": {
@@ -666,7 +666,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
     numHiddenDims: 8192,
     plmLayer: 24,
     defaultDim: 0,
-    supportsCustomSequence: false,
+    supportsCustomSequence: true,
     curated: [],
   },
   "SAE8192-L24-K32": {
@@ -675,7 +675,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
     numHiddenDims: 8192,
     plmLayer: 24,
     defaultDim: 0,
-    supportsCustomSequence: false,
+    supportsCustomSequence: true,
     curated: [],
   },
   "SAE8192-L24-K64": {
@@ -684,7 +684,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
     numHiddenDims: 8192,
     plmLayer: 24,
     defaultDim: 0,
-    supportsCustomSequence: false,
+    supportsCustomSequence: true,
     curated: [],
   },
   "SAE8192-L24-K128": {
@@ -693,7 +693,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
     numHiddenDims: 8192,
     plmLayer: 24,
     defaultDim: 0,
-    supportsCustomSequence: false,
+    supportsCustomSequence: true,
     curated: [],
   },
   "SAE8192-L24-K256": {
@@ -702,7 +702,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
     numHiddenDims: 8192,
     plmLayer: 24,
     defaultDim: 0,
-    supportsCustomSequence: false,
+    supportsCustomSequence: true,
     curated: [],
   },
 };

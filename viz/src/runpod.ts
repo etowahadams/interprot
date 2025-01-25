@@ -72,7 +72,7 @@ export async function getSAEDimActivations(input: RunpodSAEDimActivationsInput):
   }
 
   // Both caches have missed, call API.
-  const data = await postRunpod(input, "jrzmm3fq54zjuy");
+  const data = await postRunpod(input, "fad3whi01lfmh2");
   SAEDimActivationsCache[dimCacheKey] = data.tokens_acts_list;
   return data.tokens_acts_list;
 }
@@ -84,7 +84,7 @@ export async function getSAEAllDimsActivations(
   if (cacheKey in SAEAllDimsActivationsCache) {
     return SAEAllDimsActivationsCache[cacheKey];
   }
-  const data = await postRunpod(input, "jrzmm3fq54zjuy");
+  const data = await postRunpod(input, "fad3whi01lfmh2");
   SAEAllDimsActivationsCache[cacheKey] = data.token_acts_list_by_active_dim;
   return data.token_acts_list_by_active_dim;
 }

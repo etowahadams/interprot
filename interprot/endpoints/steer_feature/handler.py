@@ -25,6 +25,15 @@ WEIGHTS_DIR = "/weights"
 SAE_NAME_TO_CHECKPOINT = {
     "SAE4096-L24": "esm2_plm1280_l24_sae4096_100Kseqs.pt",
     "SAE4096-L24-ab": "esm2_plm1280_l24_sae4096_k128_auxk512_antibody_seqs.ckpt",
+    "SAE4096-L4": "esm2_plm1280_l4_sae4096_k64.ckpt",
+    "SAE4096-L8": "esm2_plm1280_l8_sae4096_k64_auxk640.ckpt",
+    "SAE4096-L12": "esm2_plm1280_l12_sae4096_k64.ckpt",
+    "SAE4096-L16": "esm2_plm1280_l16_sae4096_k64_auxk640.ckpt",
+    "SAE4096-L20": "esm2_plm1280_l20_sae4096_k64.ckpt",
+    "SAE4096-L24-v2": "esm2_plm1280_l24_sae4096_k64_auxk640.ckpt",
+    "SAE4096-L28": "esm2_plm1280_l28_sae4096_k64.ckpt",
+    "SAE4096-L32": "esm2_plm1280_l32_sae4096_k64.ckpt",
+    "SAE4096-L33": "esm2_plm1280_l33_sae4096_aux640.ckpt",
 }
 
 
@@ -409,6 +418,7 @@ def handler(event):
         multiplier = input_data["multiplier"]
 
         sae_model = sae_name_to_model[sae_name]
+        print(f"sae_model: {sae_model}")
 
         # First, get ESM layer 24 activations, encode it with SAE to get a (L, 4096) tensor
         _, esm_layer_acts = esm2_model.get_layer_activations(seq, 24)

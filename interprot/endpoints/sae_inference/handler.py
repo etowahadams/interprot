@@ -421,6 +421,7 @@ def handler(event):
         logger.info(f"esm_layer_acts: {esm_layer_acts.shape}")
 
         sae_model = sae_name_to_model[sae_name]
+        print(f"sae_model: {sae_model}")
         sae_acts = sae_model.get_acts(esm_layer_acts)[1:-1]
         logger.info(f"sae_acts: {sae_acts.shape}")
 
