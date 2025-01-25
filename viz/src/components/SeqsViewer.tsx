@@ -472,7 +472,7 @@ export default function SeqsViewer({ seqs, title }: SeqsViewerProps) {
                           <TooltipContent>
                             Position: {seq.sequence.slice(0, index).replace(/-/g, "").length}
                             <br />
-                            SAE Activation: {seq.sae_acts[index]?.toFixed(3)}
+                            SAE Activation: {seq.sae_acts[index]}
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>

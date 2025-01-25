@@ -365,14 +365,14 @@ class ESM2Model(pl.LightningModule):
 
 
 def load_models():
-    sae_name_to_model = {}
+    sea_name_to_info = {}
     for sae_name, sae_checkpoint in SAE_NAME_TO_CHECKPOINT.items():
         pattern = r"plm(\d+).*?l(\d+).*?sae(\d+)"
         matches = re.search(pattern, sae_checkpoint)
         if matches:
-            plm_dim, _, sae_dim = map(int, matches.groups())
+            plm_dim, plm_layer, sae_dim = map(int, matches.groups())
         else:
-            raise ValueError("Checkpoint file must be named in the format plm<n>_l<n>_sae<n>")
+            raise ValueError("Checkpoint file must start with plm<n>_l<n>_sae<n>")
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Load ESM2 model
@@ -403,10 +403,13 @@ def load_models():
                     for k, v in torch.load(sae_weights)["state_dict"].items()
                 }
             )
-        sae_name_to_model[sae_name] = sae_model
+        sea_name_to_info[sae_name] = {
+            "model": sae_model,
+            "plm_layer": plm_layer,
+        }
 
     logger.info("Models loaded successfully")
-    return esm2_model, sae_name_to_model
+    return esm2_model, sea_name_to_info
 
 
 def handler(event):
@@ -416,14 +419,15 @@ def handler(event):
         seq = input_data["sequence"]
         sae_name = input_data["sae_name"]
         dim = input_data.get("dim")
-        _, esm_layer_acts = esm2_model.get_layer_activations(seq, 24)
-        esm_layer_acts = esm_layer_acts[0].float()
-        logger.info(f"esm_layer_acts: {esm_layer_acts.shape}")
+        sae_info = sea_name_to_info[sae_name]
+        sae_model = sae_info["model"]
+        plm_layer = sae_info["plm_layer"]
+        logger.info(f"sae_name: {sae_name}, plm_layer: {plm_layer}, dim: {dim}")
 
-        sae_model = sae_name_to_model[sae_name]
-        print(f"sae_model: {sae_model}")
+        _, esm_layer_acts = esm2_model.get_layer_activations(seq, plm_layer)
+        esm_layer_acts = esm_layer_acts[0].float()
+
         sae_acts = sae_model.get_acts(esm_layer_acts)[1:-1]
-        logger.info(f"sae_acts: {sae_acts.shape}")
 
         data = {}
         if dim is not None:
@@ -454,5 +458,5 @@ def handler(event):
         return {"status": "error", "error": str(e)}
 
 
-esm2_model, sae_name_to_model = load_models()
+esm2_model, sea_name_to_info = load_models()
 runpod.serverless.start({"handler": handler})

@@ -80,7 +80,7 @@ const FullSeqsViewer: React.FC<FullSeqViewerProps> = ({
                           </span>
                         </TooltipTrigger>
                         <TooltipContent>
-                          Position: {pos}, SAE Activation: {chain.activations[pos]?.toFixed(3)}
+                          Position: {pos}, SAE Activation: {chain.activations[pos]}
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
