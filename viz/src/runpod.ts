@@ -1,3 +1,6 @@
+const INFERENCE_ENDPOINT_ID = "mhsktkj2h1uss8";
+const STEERING_ENDPOINT_ID = "8ee0uonshst9k2";
+
 type RunpodSAEDimActivationsInput = {
   sae_name: string;
   sequence: string;
@@ -72,7 +75,7 @@ export async function getSAEDimActivations(input: RunpodSAEDimActivationsInput):
   }
 
   // Both caches have missed, call API.
-  const data = await postRunpod(input, "mhsktkj2h1uss8");
+  const data = await postRunpod(input, INFERENCE_ENDPOINT_ID);
   SAEDimActivationsCache[dimCacheKey] = data.tokens_acts_list;
   return data.tokens_acts_list;
 }
@@ -84,12 +87,12 @@ export async function getSAEAllDimsActivations(
   if (cacheKey in SAEAllDimsActivationsCache) {
     return SAEAllDimsActivationsCache[cacheKey];
   }
-  const data = await postRunpod(input, "mhsktkj2h1uss8");
+  const data = await postRunpod(input, INFERENCE_ENDPOINT_ID);
   SAEAllDimsActivationsCache[cacheKey] = data.token_acts_list_by_active_dim;
   return data.token_acts_list_by_active_dim;
 }
 
 export async function getSteeredSequence(input: RunpodSteeringInput): Promise<string> {
-  const data = await postRunpod(input, "ok5xk5v1375qpf");
+  const data = await postRunpod(input, STEERING_ENDPOINT_ID);
   return data.steered_sequence;
 }
