@@ -45,7 +45,7 @@ jobs:
           VITE_RUNPOD_API_KEY: ${{ secrets.VITE_RUNPOD_API_KEY }}
         run: cd viz && pnpm run build && echo "interprot.com" > ./dist/CNAME
       - name: Setup Pages
-        uses: actions/configure-pages@v3
+        uses: actions/configure-pages@v5
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
@@ -53,4 +53,4 @@ jobs:
           path: "viz/dist"
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v3
+        uses: actions/deploy-pages@v4

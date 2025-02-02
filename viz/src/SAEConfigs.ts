@@ -436,7 +436,8 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
   },
   "SAE4096-L12": {
     storagePath: "4096_layer_sweep/esm2_plm1280_l12_sae4096_k64_auxk640",
-    description: "",
+    description:
+      "This SAE was trained on layer 12 of [ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D) using sequences from [UniRef50](https://www.uniprot.org/help/uniref) and has 4096 hidden dimensions. Click on a feature below to visualize its activation pattern.",
     numHiddenDims: 4096,
     plmLayer: 12,
     defaultDim: 0,
