@@ -12,7 +12,7 @@ Check out this demo notebook for running inference on our layer 24 SAE with a cu
 
 ## The visualizer
 
-The visualizer is a React app with some RunPod serverless functions as backend.
+The visualizer is a React app with some RunPod serverless functions that serve our SAEs.
 
 ### Running the visualizer locally
 
@@ -28,3 +28,19 @@ The RunPod serverless functions live in their own repos:
 
 - SAE inference: https://github.com/liambai/sae-inference
 - SAE steering: https://github.com/liambai/sae-steering
+
+## Running and developing the InterProt package
+
+### Setting up pre-commit
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
+### Building and running the Docker container
+
+```bash
+docker compose build
+docker compose run --rm interprot bash
+```
