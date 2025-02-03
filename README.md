@@ -1,6 +1,6 @@
 # InterProt
 
-This repo contains tools for interpreting protein language models using sparse autoencoders (SAEs). Our SAE visualizer is available at [interprot.com/](https://interprot.com/). For more information, check out our [preprint](TODO).
+This repo contains tools for interpreting protein language models using sparse autoencoders (SAEs). Our SAE visualizer is available at [interprot.com](https://interprot.com). For more information, check out our [preprint](TODO).
 
 `viz` contains the frontend app for visualizing SAE features. `interprot` is a Python package for SAE training, evaluation, and interpretation.
 
@@ -29,7 +29,7 @@ The RunPod serverless functions live in their own repos:
 - SAE inference: https://github.com/liambai/sae-inference
 - SAE steering: https://github.com/liambai/sae-steering
 
-## Running and developing the InterProt package
+## Running and developing the Python package
 
 ### Setting up pre-commit
 
