@@ -4,8 +4,8 @@ from unittest.mock import Mock, patch
 import numpy as np
 import pandas as pd
 
-from interprot.logistic_regression_probe.annotations import ResidueAnnotation
-from interprot.logistic_regression_probe.utils import (
+from interprot.oned_probe.annotations import ResidueAnnotation
+from interprot.oned_probe.utils import (
     Example,
     get_annotation_entries_for_class,
     make_examples_from_annotation_entries,
@@ -14,7 +14,7 @@ from interprot.logistic_regression_probe.utils import (
 
 
 class TestUtils(unittest.TestCase):
-    @patch("interprot.logistic_regression_probe.utils.get_sae_acts")
+    @patch("interprot.oned_probe.utils.get_sae_acts")
     def test_make_examples_from_annotation_entries(self, mock_get_sae_acts):
         # Mock the necessary objects
         mock_tokenizer = Mock()
@@ -86,7 +86,7 @@ class TestUtils(unittest.TestCase):
             plm_layer=24,
         )
 
-    @patch("interprot.logistic_regression_probe.utils.get_sae_acts")
+    @patch("interprot.oned_probe.utils.get_sae_acts")
     def test_make_examples_from_annotation_entries_pool_over_annotation(self, mock_get_sae_acts):
         seq_to_annotation_entries = {
             "AAAAAAAAAA": [{"start": 4, "end": 6}],

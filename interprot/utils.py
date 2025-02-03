@@ -1,21 +1,10 @@
-import os
 from typing import Optional
 
 import numpy as np
 import polars as pl
 import torch
+from scipy.sparse import csr_matrix
 from transformers import PreTrainedModel, PreTrainedTokenizer
-
-
-def create_file(dir: str, file_name: str) -> None:
-    if not os.path.isdir(dir):
-        raise ValueError(f"The specified directory '{dir}' does not exist.")
-
-    file_path = os.path.join(dir, file_name)
-    try:
-        open(file_path, "x").close()
-    except FileExistsError:
-        pass
 
 
 def get_layer_activations(
@@ -56,6 +45,17 @@ def get_layer_activations(
     layer_acts = outputs.hidden_states[layer]
     del outputs
     return layer_acts
+
+
+def tensor_to_sparse_matrix(T):
+    return csr_matrix(T.cpu().numpy().astype(np.float32))
+
+
+def sparse_matrix_to_tensor(sparse_matrix):
+    coo = sparse_matrix.tocoo()
+    values = torch.tensor(coo.data, dtype=torch.float32)
+    indices = torch.tensor([coo.row, coo.col], dtype=torch.int64)
+    return torch.sparse_coo_tensor(indices, values, coo.shape)
 
 
 def train_val_test_split(

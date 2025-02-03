@@ -8,12 +8,12 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import f1_score, precision_score, recall_score
 from transformers import AutoTokenizer, EsmModel
 
-from interprot.logistic_regression_probe.annotations import (
+from interprot.oned_probe.annotations import (
     RESIDUE_ANNOTATION_NAMES,
     RESIDUE_ANNOTATIONS,
 )
-from interprot.logistic_regression_probe.logging import logger
-from interprot.logistic_regression_probe.utils import (
+from interprot.oned_probe.logging import logger
+from interprot.oned_probe.utils import (
     prepare_arrays_for_logistic_regression,
 )
 from interprot.sae_model import SparseAutoencoder

@@ -11,8 +11,8 @@ import pandas as pd
 from tqdm import tqdm
 from transformers import AutoTokenizer, EsmModel
 
-from interprot.logistic_regression_probe.annotations import ResidueAnnotation
-from interprot.logistic_regression_probe.logging import logger
+from interprot.oned_probe.annotations import ResidueAnnotation
+from interprot.oned_probe.logging import logger
 from interprot.sae_model import SparseAutoencoder
 from interprot.utils import get_layer_activations, parse_swissprot_annotation
 

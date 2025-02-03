@@ -4,57 +4,120 @@
 #
 #    pip-compile --extra=dev --output-file=requirements.txt pyproject.toml
 #
+anyio==4.8.0
+    # via httpx
+backports-tarfile==1.2.0
+    # via jaraco-context
 certifi==2024.8.30
-    # via requests
+    # via
+    #   httpcore
+    #   httpx
+    #   requests
 charset-normalizer==3.3.2
     # via requests
 click==8.1.7
-    # via interprot (pyproject.toml)
+    # via
+    #   hatch
+    #   interprot (pyproject.toml)
+    #   userpath
+distlib==0.3.9
+    # via virtualenv
 filelock==3.16.0
     # via
     #   huggingface-hub
     #   torch
     #   transformers
+    #   virtualenv
 fsspec==2024.9.0
     # via
     #   huggingface-hub
     #   torch
+h11==0.14.0
+    # via httpcore
+hatch==1.13.0
+    # via interprot (pyproject.toml)
+hatchling==1.25.0
+    # via hatch
+httpcore==1.0.7
+    # via httpx
+httpx==0.28.1
+    # via hatch
 huggingface-hub==0.24.7
     # via
     #   tokenizers
     #   transformers
+hyperlink==21.0.0
+    # via hatch
 idna==3.9
-    # via requests
+    # via
+    #   anyio
+    #   httpx
+    #   hyperlink
+    #   requests
+importlib-metadata==8.6.1
+    # via keyring
 iniconfig==2.0.0
     # via pytest
+jaraco-classes==3.4.0
+    # via keyring
+jaraco-context==6.0.1
+    # via keyring
+jaraco-functools==4.1.0
+    # via keyring
 jinja2==3.1.4
     # via torch
 joblib==1.4.2
     # via scikit-learn
+keyring==25.6.0
+    # via hatch
+markdown-it-py==3.0.0
+    # via rich
 markupsafe==2.1.5
     # via jinja2
+mdurl==0.1.2
+    # via markdown-it-py
+more-itertools==10.6.0
+    # via
+    #   jaraco-classes
+    #   jaraco-functools
 mpmath==1.3.0
     # via sympy
 networkx==3.3
     # via torch
 numpy==1.26.4
     # via
-    #   pandas
     #   interprot (pyproject.toml)
+    #   pandas
     #   scikit-learn
     #   scipy
     #   transformers
 packaging==24.1
     # via
+    #   hatch
+    #   hatchling
     #   huggingface-hub
     #   pytest
     #   transformers
 pandas==2.2.3
     # via interprot (pyproject.toml)
+pathspec==0.12.1
+    # via hatchling
+pexpect==4.9.0
+    # via hatch
+platformdirs==4.3.6
+    # via
+    #   hatch
+    #   virtualenv
 pluggy==1.5.0
-    # via pytest
+    # via
+    #   hatchling
+    #   pytest
 polars==1.7.1
     # via interprot (pyproject.toml)
+ptyprocess==0.7.0
+    # via pexpect
+pygments==2.19.1
+    # via rich
 pytest==8.3.3
     # via interprot (pyproject.toml)
 python-dateutil==2.9.0.post0
@@ -71,20 +134,32 @@ requests==2.32.3
     # via
     #   huggingface-hub
     #   transformers
+rich==13.9.4
+    # via hatch
 safetensors==0.4.5
     # via transformers
 scikit-learn==1.5.2
     # via interprot (pyproject.toml)
 scipy==1.14.1
-    # via scikit-learn
+    # via
+    #   interprot (pyproject.toml)
+    #   scikit-learn
+shellingham==1.5.4
+    # via hatch
 six==1.16.0
     # via python-dateutil
+sniffio==1.3.1
+    # via anyio
 sympy==1.13.2
     # via torch
 threadpoolctl==3.5.0
     # via scikit-learn
 tokenizers==0.19.1
     # via transformers
+tomli-w==1.2.0
+    # via hatch
+tomlkit==0.13.2
+    # via hatch
 torch==2.2.2
     # via interprot (pyproject.toml)
 tqdm==4.66.5
@@ -94,11 +169,24 @@ tqdm==4.66.5
     #   transformers
 transformers==4.44.2
     # via interprot (pyproject.toml)
+trove-classifiers==2025.1.15.22
+    # via hatchling
 typing-extensions==4.12.2
     # via
+    #   anyio
     #   huggingface-hub
     #   torch
 tzdata==2024.2
     # via pandas
 urllib3==2.2.3
     # via requests
+userpath==1.9.2
+    # via hatch
+uv==0.5.26
+    # via hatch
+virtualenv==20.29.1
+    # via hatch
+zipp==3.21.0
+    # via importlib-metadata
+zstandard==0.23.0
+    # via hatch

@@ -15,6 +15,7 @@ dependencies = [
     "scikit-learn",
     "tqdm",
     "pandas",
+    "scipy"
 ]
 requires-python = ">=3.10"
 readme = "README.md"
@@ -23,13 +24,13 @@ readme = "README.md"
 packages = [
     "interprot",
     "interprot.autointerp",
-    "interprot.logistic_regression_probe",
+    "interprot.oned_probe",
     "interprot.make_viz_files",
 ]
 
 [project.scripts]
 autointerp = "interprot.autointerp.__main__:cli"
-logistic_regression_probe = "interprot.logistic_regression_probe.__main__:cli"
+oned_probe = "interprot.oned_probe.__main__:cli"
 make_viz_files = "interprot.make_viz_files.__main__:make_viz_files"
 
 [project.urls]
@@ -63,5 +64,5 @@ dev = [
 packages = [
     "interprot",
     "interprot.autointerp",
-    "interprot.logistic_regression_probe"
+    "interprot.oned_probe"
 ]

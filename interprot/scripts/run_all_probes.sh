@@ -38,7 +38,7 @@ output_dir="${checkpoint_name}_probe_results"
 mkdir -p "$output_dir"
 
 # Run the logistic regression probes
-logistic_regression_probe single-latent \
+oned_probe single-latent \
     --sae-checkpoint $checkpoint_file \
     --sae-dim $sae_dim \
     --plm-dim 1280 \
@@ -46,7 +46,7 @@ logistic_regression_probe single-latent \
     --swissprot-tsv swissprot_full_annotations.tsv \
     --output-dir $output_dir/single_latent_single_residue
 
-logistic_regression_probe single-latent \
+oned_probe single-latent \
     --sae-checkpoint $checkpoint_file \
     --sae-dim $sae_dim \
     --plm-dim 1280 \
@@ -55,7 +55,7 @@ logistic_regression_probe single-latent \
     --pool-over-annotation True \
     --output-dir $output_dir/single_latent_pool_over_annotation
 
-logistic_regression_probe all-latents \
+oned_probe all-latents \
     --sae-checkpoint $checkpoint_file \
     --sae-dim $sae_dim \
     --plm-dim 1280 \
