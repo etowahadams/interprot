@@ -446,7 +446,8 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
   },
   "SAE4096-L16": {
     storagePath: "4096_layer_sweep/esm2_plm1280_l16_sae4096_k64_auxk640",
-    description: "",
+    description:
+      "This SAE was trained on layer 16 of [ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D) using sequences from [UniRef50](https://www.uniprot.org/help/uniref) and has 4096 hidden dimensions. Click on a feature below to visualize its activation pattern.",
     numHiddenDims: 4096,
     plmLayer: 16,
     defaultDim: 0,
@@ -455,7 +456,8 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
   },
   "SAE4096-L20": {
     storagePath: "4096_layer_sweep/esm2_plm1280_l20_sae4096_k64_auxk640",
-    description: "",
+    description:
+      "This SAE was trained on layer 20 of [ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D) using sequences from [UniRef50](https://www.uniprot.org/help/uniref) and has 4096 hidden dimensions. Click on a feature below to visualize its activation pattern.",
     numHiddenDims: 4096,
     plmLayer: 20,
     defaultDim: 0,
@@ -464,7 +466,8 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
   },
   "SAE4096-L28": {
     storagePath: "4096_layer_sweep/esm2_plm1280_l28_sae4096_k64_auxk640",
-    description: "",
+    description:
+      "This SAE was trained on layer 28 of [ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D) using sequences from [UniRef50](https://www.uniprot.org/help/uniref) and has 4096 hidden dimensions. Click on a feature below to visualize its activation pattern.",
     numHiddenDims: 4096,
     plmLayer: 28,
     defaultDim: 0,
@@ -473,7 +476,8 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
   },
   "SAE4096-L32": {
     storagePath: "4096_layer_sweep/esm2_plm1280_l32_sae4096_k64_auxk640",
-    description: "",
+    description:
+      "This SAE was trained on layer 32 of [ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D) using sequences from [UniRef50](https://www.uniprot.org/help/uniref) and has 4096 hidden dimensions. Click on a feature below to visualize its activation pattern.",
     numHiddenDims: 4096,
     plmLayer: 32,
     defaultDim: 0,
@@ -482,7 +486,8 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
   },
   "SAE4096-L33": {
     storagePath: "4096_layer_sweep/esm2_plm1280_l33_sae4096_k64_auxk640",
-    description: "",
+    description:
+      "This SAE was trained on layer 33 of [ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D) using sequences from [UniRef50](https://www.uniprot.org/help/uniref) and has 4096 hidden dimensions. Click on a feature below to visualize its activation pattern.",
     numHiddenDims: 4096,
     plmLayer: 33,
     defaultDim: 0,
@@ -653,7 +658,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
       },
     ],
   },
-  "SAE8192-L24-K16": {
+  "SAE8192-L24": {
     storagePath: "k_sweep/esm2_plm1280_l24_sae8192_k16_auxk640",
     description: "",
     numHiddenDims: 8192,
@@ -662,40 +667,41 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
     supportsCustomSequence: false,
     curated: [],
   },
-  "SAE8192-L24-K32": {
-    storagePath: "k_sweep/esm2_plm1280_l24_sae8192_k32_auxk640",
-    description: "",
-    numHiddenDims: 8192,
-    plmLayer: 24,
-    defaultDim: 0,
-    supportsCustomSequence: false,
-    curated: [],
-  },
-  "SAE8192-L24-K64": {
-    storagePath: "k_sweep/esm2_plm1280_l24_sae8192_k64_auxk640",
-    description: "",
-    numHiddenDims: 8192,
-    plmLayer: 24,
-    defaultDim: 0,
-    supportsCustomSequence: false,
-    curated: [],
-  },
-  "SAE8192-L24-K128": {
-    storagePath: "k_sweep/esm2_plm1280_l24_sae8192_k128_auxk640",
-    description: "",
-    numHiddenDims: 8192,
-    plmLayer: 24,
-    defaultDim: 0,
-    supportsCustomSequence: false,
-    curated: [],
-  },
-  "SAE8192-L24-K256": {
-    storagePath: "k_sweep/esm2_plm1280_l24_sae8192_k256_auxk640",
-    description: "",
-    numHiddenDims: 8192,
-    plmLayer: 24,
-    defaultDim: 0,
-    supportsCustomSequence: false,
-    curated: [],
-  },
+  // NOTE(liam): Commenting these out cuz they aren't that interesting, leaving one 8192-dim model for now.
+  // "SAE8192-L24-K32": {
+  //   storagePath: "k_sweep/esm2_plm1280_l24_sae8192_k32_auxk640",
+  //   description: "",
+  //   numHiddenDims: 8192,
+  //   plmLayer: 24,
+  //   defaultDim: 0,
+  //   supportsCustomSequence: false,
+  //   curated: [],
+  // },
+  // "SAE8192-L24-K64": {
+  //   storagePath: "k_sweep/esm2_plm1280_l24_sae8192_k64_auxk640",
+  //   description: "",
+  //   numHiddenDims: 8192,
+  //   plmLayer: 24,
+  //   defaultDim: 0,
+  //   supportsCustomSequence: false,
+  //   curated: [],
+  // },
+  // "SAE8192-L24-K128": {
+  //   storagePath: "k_sweep/esm2_plm1280_l24_sae8192_k128_auxk640",
+  //   description: "",
+  //   numHiddenDims: 8192,
+  //   plmLayer: 24,
+  //   defaultDim: 0,
+  //   supportsCustomSequence: false,
+  //   curated: [],
+  // },
+  // "SAE8192-L24-K256": {
+  //   storagePath: "k_sweep/esm2_plm1280_l24_sae8192_k256_auxk640",
+  //   description: "",
+  //   numHiddenDims: 8192,
+  //   plmLayer: 24,
+  //   defaultDim: 0,
+  //   supportsCustomSequence: false,
+  //   curated: [],
+  // },
 };

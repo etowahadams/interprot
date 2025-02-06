@@ -1,6 +1,6 @@
 # InterProt
 
-This repo contains tools for interpreting protein language models using sparse autoencoders (SAEs). Our SAE visualizer is available at [interprot.com](https://interprot.com). For more information, check out our [preprint](TODO).
+This repo contains tools for interpreting protein language models using sparse autoencoders (SAEs). Our SAE visualizer is available at [interprot.com](https://interprot.com) and our SAE models weights are on [Hugging Face](https://huggingface.co/liambai/InterProt-ESM2-SAEs). For more information, check out our [preprint](TODO).
 
 `viz` contains the frontend app for visualizing SAE features. `interprot` is a Python package for SAE training, evaluation, and interpretation.
 
