@@ -6,9 +6,9 @@ This repo contains tools for interpreting protein language models using sparse a
 
 ## Getting started with our SAEs
 
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/etowahadams/interprot/blob/main/notebooks/sae_inference.ipynb)
+Check out this [demo notebook](./notebooks/sae_inference.ipynb) for SAE inference with a custom input sequence.
 
-Check out this demo notebook for SAE inference with a custom input sequence.
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/etowahadams/interprot/blob/main/notebooks/sae_inference.ipynb)
 
 ## The visualizer
 
@@ -44,3 +44,9 @@ pre-commit install
 docker compose build
 docker compose run --rm interprot bash
 ```
+
+## Linear probes
+
+We find linear probes over SAE latents to be a powerful tool for uncovering interpretable features. Here's a [demo notebook](./notebooks/subcellular_localization_linear_probe.ipynb) on the subcellular localization classification task.
+
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/etowahadams/interprot/blob/main/notebooks/subcellular_localization_linear_probe.ipynb)

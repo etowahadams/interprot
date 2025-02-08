@@ -9,11 +9,6 @@ class LinearClassifier(nn.Module):
     """Linear classifier"""
 
     def __init__(self, input_dim: int, numb_class: int):
-        """
-        Args:
-        - input_dim: int,
-        - numb_class: int, the number of classes
-        """
         super(LinearClassifier, self).__init__()
         self.linear = nn.Linear(input_dim, numb_class)
 
@@ -21,10 +16,10 @@ class LinearClassifier(nn.Module):
         return self.linear(x)
 
     def write_weights_to_csv(self, output_dir: str):
-        """Write model weights to CSV files in sorted order.
+        """Writes model weights to CSV files in sorted order.
 
         For multi-class models, writes one CSV per class.
-        Each CSV has columns "Index" and "Coefficient" sorted descending.
+        Each CSV has columns "Index" and "Weight" sorted descending.
 
         Args:
             output_dir: Directory to write CSV files to
