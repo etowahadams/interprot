@@ -29,27 +29,33 @@ const Navbar: React.FC = () => {
               >
                 <X />
               </button>
-              <Link
-                to={`/sae-viz/${DEFAULT_SAE_MODEL}/${SAE_CONFIGS[DEFAULT_SAE_MODEL].defaultDim}`}
+              <a
+                href="https://www.biorxiv.org/content/10.1101/2025.02.06.636901v1"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-2xl text-gray-600 hover:text-gray-900"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                Visualizer
-              </Link>
-              <Link
-                to="https://github.com/etowahadams/plm-interpretability/tree/main"
+                Preprint
+              </a>
+              <a
+                href="https://github.com/etowahadams/plm-interpretability/tree/main"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-2xl text-gray-600 hover:text-gray-900"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 GitHub
-              </Link>
-              <Link
-                to="https://huggingface.co/liambai/InterProt-ESM2-SAEs"
+              </a>
+              <a
+                href="https://huggingface.co/liambai/InterProt-ESM2-SAEs"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-2xl text-gray-600 hover:text-gray-900"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Models
-              </Link>
+              </a>
               <Link
                 to="/about"
                 className="text-2xl text-gray-600 hover:text-gray-900"
@@ -68,21 +74,30 @@ const Navbar: React.FC = () => {
         </div>
       ) : (
         <nav className="space-x-4 flex">
-          <Link to="/sae-viz" className="text-gray-600 hover:text-gray-900">
-            Visualizer
-          </Link>
-          <Link
-            to="https://github.com/etowahadams/plm-interpretability/tree/main"
+          <a
+            href="https://www.biorxiv.org/content/10.1101/2025.02.06.636901v1"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-gray-600 hover:text-gray-900"
+          >
+            Preprint
+          </a>
+          <a
+            href="https://github.com/etowahadams/plm-interpretability/tree/main"
+            target="_blank"
+            rel="noopener noreferrer"
             className="text-gray-600 hover:text-gray-900"
           >
             GitHub
-          </Link>
-          <Link
-            to="https://huggingface.co/liambai/InterProt-ESM2-SAEs"
+          </a>
+          <a
+            href="https://huggingface.co/liambai/InterProt-ESM2-SAEs"
+            target="_blank"
+            rel="noopener noreferrer"
             className="text-gray-600 hover:text-gray-900"
           >
             Models
-          </Link>
+          </a>
           <Link to="/about" className="text-gray-600 hover:text-gray-900">
             About
           </Link>

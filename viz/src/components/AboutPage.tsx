@@ -39,12 +39,14 @@ const AboutPage: React.FC = () => {
         <p className="mt-6 text-left">
           <Markdown>
             We trained some Sparse Autoencoders (SAEs) on
-            [ESM2](https://github.com/facebookresearch/esm), build an interactive
-            [visualizer](/#/sae-viz), and are working on writing up more technical details.
-            Meanwhile, if you're interested in learning more, check out these tweets:
+            [ESM2](https://github.com/facebookresearch/esm), built an interactive
+            [visualizer](/#/sae-viz), and released a
+            [preprint](https://www.biorxiv.org/content/10.1101/2025.02.06.636901v1). If you prefer
+            Tweetorials, check these out:
           </Markdown>
         </p>
         <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <EmbeddedTweet url="https://twitter.com/etowah0/status/1888977417127055413" />
           <EmbeddedTweet url="https://twitter.com/liambai21/status/1852765669080879108" />
           <EmbeddedTweet url="https://twitter.com/liambai21/status/1857066057774567706" />
           <EmbeddedTweet url="https://twitter.com/liambai21/status/1854739750692802566" />
