@@ -10,7 +10,9 @@ export type CuratedFeature = {
 
 export type SAEConfig = {
   storagePath: string;
-  description: string;
+  baseModel: string;
+  huggingFaceModelName?: string;
+  trainingData: string;
   numHiddenDims: number;
   plmLayer: number;
   searchExamples?: { [key: string]: AminoAcidSequence | PDBID };
@@ -28,11 +30,16 @@ export const CONTRIBUTORS: Record<string, string> = {
 export const STORAGE_ROOT_URL =
   "https://raw.githubusercontent.com/liambai/plm-interp-viz-data/refs/heads/main";
 
+export const HUGGINGFACE_REPO_URL = "https://huggingface.co/liambai/InterProt-ESM2-SAEs/blob/main";
+export const HUGGINGFACE_DOWNLOAD_URL =
+  "https://huggingface.co/liambai/InterProt-ESM2-SAEs/resolve/main";
+
 export const SAE_CONFIGS: Record<string, SAEConfig> = {
   "SAE4096-L24": {
     storagePath: "esm2_plm1280_l24_sae4096_100Kseqs",
-    description:
-      "This SAE was trained on layer 24 of [ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D) using sequences from [UniRef50](https://www.uniprot.org/help/uniref) and has 4096 hidden dimensions. Click on a feature below to visualize its activation pattern.",
+    baseModel: "[ESM-2 650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
+    huggingFaceModelName: "esm2_plm1280_l24_sae4096_100k.safetensors",
+    trainingData: "[UniRef50](https://www.uniprot.org/help/uniref)",
     numHiddenDims: 4096,
     plmLayer: 24,
     searchExamples: {
@@ -416,8 +423,9 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
   },
   "SAE4096-L4": {
     storagePath: "4096_layer_sweep/esm2_plm1280_l4_sae4096_k64_auxk640",
-    description:
-      "This SAE was trained on layer 4 of [ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D) using sequences from [UniRef50](https://www.uniprot.org/help/uniref) and has 4096 hidden dimensions. Click on a feature below to visualize its activation pattern.",
+    huggingFaceModelName: "esm2_plm1280_l4_sae4096.safetensors",
+    baseModel: "[ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
+    trainingData: "[UniRef50](https://www.uniprot.org/help/uniref)",
     numHiddenDims: 4096,
     plmLayer: 4,
     defaultDim: 0,
@@ -426,8 +434,9 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
   },
   "SAE4096-L8": {
     storagePath: "4096_layer_sweep/esm2_plm1280_l8_sae4096_k64_auxk640",
-    description:
-      "This SAE was trained on layer 8 of [ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D) using sequences from [UniRef50](https://www.uniprot.org/help/uniref) and has 4096 hidden dimensions. Click on a feature below to visualize its activation pattern.",
+    huggingFaceModelName: "esm2_plm1280_l8_sae4096.safetensors",
+    baseModel: "[ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
+    trainingData: "[UniRef50](https://www.uniprot.org/help/uniref)",
     numHiddenDims: 4096,
     plmLayer: 8,
     defaultDim: 0,
@@ -436,8 +445,9 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
   },
   "SAE4096-L12": {
     storagePath: "4096_layer_sweep/esm2_plm1280_l12_sae4096_k64_auxk640",
-    description:
-      "This SAE was trained on layer 12 of [ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D) using sequences from [UniRef50](https://www.uniprot.org/help/uniref) and has 4096 hidden dimensions. Click on a feature below to visualize its activation pattern.",
+    huggingFaceModelName: "esm2_plm1280_l12_sae4096.safetensors",
+    baseModel: "[ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
+    trainingData: "[UniRef50](https://www.uniprot.org/help/uniref)",
     numHiddenDims: 4096,
     plmLayer: 12,
     defaultDim: 0,
@@ -446,8 +456,9 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
   },
   "SAE4096-L16": {
     storagePath: "4096_layer_sweep/esm2_plm1280_l16_sae4096_k64_auxk640",
-    description:
-      "This SAE was trained on layer 16 of [ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D) using sequences from [UniRef50](https://www.uniprot.org/help/uniref) and has 4096 hidden dimensions. Click on a feature below to visualize its activation pattern.",
+    huggingFaceModelName: "esm2_plm1280_l16_sae4096.safetensors",
+    baseModel: "[ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
+    trainingData: "[UniRef50](https://www.uniprot.org/help/uniref)",
     numHiddenDims: 4096,
     plmLayer: 16,
     defaultDim: 0,
@@ -456,8 +467,9 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
   },
   "SAE4096-L20": {
     storagePath: "4096_layer_sweep/esm2_plm1280_l20_sae4096_k64_auxk640",
-    description:
-      "This SAE was trained on layer 20 of [ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D) using sequences from [UniRef50](https://www.uniprot.org/help/uniref) and has 4096 hidden dimensions. Click on a feature below to visualize its activation pattern.",
+    huggingFaceModelName: "esm2_plm1280_l20_sae4096.safetensors",
+    baseModel: "[ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
+    trainingData: "[UniRef50](https://www.uniprot.org/help/uniref)",
     numHiddenDims: 4096,
     plmLayer: 20,
     defaultDim: 0,
@@ -466,8 +478,9 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
   },
   "SAE4096-L28": {
     storagePath: "4096_layer_sweep/esm2_plm1280_l28_sae4096_k64_auxk640",
-    description:
-      "This SAE was trained on layer 28 of [ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D) using sequences from [UniRef50](https://www.uniprot.org/help/uniref) and has 4096 hidden dimensions. Click on a feature below to visualize its activation pattern.",
+    huggingFaceModelName: "esm2_plm1280_l28_sae4096.safetensors",
+    baseModel: "[ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
+    trainingData: "[UniRef50](https://www.uniprot.org/help/uniref)",
     numHiddenDims: 4096,
     plmLayer: 28,
     defaultDim: 0,
@@ -476,8 +489,9 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
   },
   "SAE4096-L32": {
     storagePath: "4096_layer_sweep/esm2_plm1280_l32_sae4096_k64_auxk640",
-    description:
-      "This SAE was trained on layer 32 of [ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D) using sequences from [UniRef50](https://www.uniprot.org/help/uniref) and has 4096 hidden dimensions. Click on a feature below to visualize its activation pattern.",
+    huggingFaceModelName: "esm2_plm1280_l32_sae4096.safetensors",
+    baseModel: "[ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
+    trainingData: "[UniRef50](https://www.uniprot.org/help/uniref)",
     numHiddenDims: 4096,
     plmLayer: 32,
     defaultDim: 0,
@@ -486,8 +500,9 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
   },
   "SAE4096-L33": {
     storagePath: "4096_layer_sweep/esm2_plm1280_l33_sae4096_k64_auxk640",
-    description:
-      "This SAE was trained on layer 33 of [ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D) using sequences from [UniRef50](https://www.uniprot.org/help/uniref) and has 4096 hidden dimensions. Click on a feature below to visualize its activation pattern.",
+    huggingFaceModelName: "esm2_plm1280_l33_sae4096.safetensors",
+    baseModel: "[ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
+    trainingData: "[UniRef50](https://www.uniprot.org/help/uniref)",
     numHiddenDims: 4096,
     plmLayer: 33,
     defaultDim: 0,
@@ -496,8 +511,8 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
   },
   "SAE4096-L24-ab": {
     storagePath: "esm2_plm1280_l24_sae4096_k128_auxk512_antibody_seqs",
-    description:
-      "This SAE was trained on layer 24 of [ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D) using antibody sequences from [PLAbDab](https://opig.stats.ox.ac.uk/webapps/plabdab/) and has 4096 hidden dimensions. Click on a feature below to visualize its activation pattern.",
+    baseModel: "[ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
+    trainingData: "[PLAbDab](https://opig.stats.ox.ac.uk/webapps/plabdab/)",
     numHiddenDims: 4096,
     plmLayer: 24,
     searchExamples: {
@@ -660,7 +675,8 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
   },
   "SAE8192-L24": {
     storagePath: "k_sweep/esm2_plm1280_l24_sae8192_k16_auxk640",
-    description: "",
+    baseModel: "[ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
+    trainingData: "[UniRef50](https://www.uniprot.org/help/uniref)",
     numHiddenDims: 8192,
     plmLayer: 24,
     defaultDim: 0,

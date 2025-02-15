@@ -1,5 +1,10 @@
 import { useContext } from "react";
-import { CuratedFeature, SAE_CONFIGS } from "../SAEConfigs";
+import {
+  CuratedFeature,
+  HUGGINGFACE_DOWNLOAD_URL,
+  HUGGINGFACE_REPO_URL,
+  SAE_CONFIGS,
+} from "../SAEConfigs";
 import { Link } from "react-router-dom";
 import {
   Select,
@@ -76,19 +81,50 @@ export default function SAESidebar() {
               ))}
             </SelectContent>
           </Select>
-          <div className="text-sm text-left px-3 mb-2">
-            <Markdown>{SAEConfig.description}</Markdown>
+          <div className="text-sm text-left px-2 mb-4 space-y-3">
+            <table className="w-full mb-2">
+              <tbody>
+                <tr>
+                  <td className="font-medium pr-2">Base model:</td>
+                  <td>
+                    <Markdown>{SAEConfig.baseModel}</Markdown>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="font-medium pr-2">Base model layer:</td>
+                  <td>{SAEConfig.plmLayer}</td>
+                </tr>
+                <tr>
+                  <td className="font-medium pr-2">SAE dimension:</td>
+                  <td>{SAEConfig.numHiddenDims}</td>
+                </tr>
+                <tr>
+                  <td className="font-medium pr-2">SAE training data:</td>
+                  <td>
+                    <Markdown>{SAEConfig.trainingData}</Markdown>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            {SAEConfig.huggingFaceModelName && (
+              <p>
+                <Markdown>
+                  {`The SAE model weights are available on [HuggingFace](${HUGGINGFACE_REPO_URL}/${SAEConfig.huggingFaceModelName}) ([download](${HUGGINGFACE_DOWNLOAD_URL}/${SAEConfig.huggingFaceModelName})).`}
+                </Markdown>
+              </p>
+            )}
+            <p>Click on a feature below to visualize its activation pattern.</p>
           </div>
           <Link
             to={`/sae-viz/${model}/${Math.floor(Math.random() * SAEConfig.numHiddenDims)}`}
-            className="mb-3 mx-3 py-2 flex items-center justify-center text-sm border rounded-md hover:bg-accent hover:text-accent-foreground bg-background shadow-sm transition-colors"
+            className="mb-3 mx-2 py-2 flex items-center justify-center text-sm border rounded-md hover:bg-accent hover:text-accent-foreground bg-background shadow-sm transition-colors"
             onClick={() => setOpenMobile(false)}
           >
             <Dices className="w-4 h-4 mr-2" /> Random Feature
           </Link>
           <Link
             to={`/sae-viz/${model}`}
-            className="mb-3 mx-3 py-2 flex items-center justify-center text-sm border rounded-md hover:bg-accent hover:text-accent-foreground bg-background shadow-sm transition-colors"
+            className="mb-3 mx-2 py-2 flex items-center justify-center text-sm border rounded-md hover:bg-accent hover:text-accent-foreground bg-background shadow-sm transition-colors"
             onClick={() => setOpenMobile(false)}
           >
             <Search className="w-4 h-4 mr-2 shrink-0" />

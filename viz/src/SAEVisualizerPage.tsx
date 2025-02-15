@@ -129,7 +129,7 @@ const SAEVisualizerPage: React.FC = () => {
                   </TooltipTrigger>
                   <TooltipContent className="max-w-[300px]">
                     We precomputed SAE activations on 75,000 sequences from SwissProt clustered at
-                    30% sequence identity. This feature activated on this percentage of those
+                    30% sequence identity. The feature activated on this percentage of those
                     sequences.
                   </TooltipContent>
                 </Tooltip>
