@@ -424,7 +424,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
   "SAE4096-L4": {
     storagePath: "4096_layer_sweep/esm2_plm1280_l4_sae4096_k64_auxk640",
     huggingFaceModelName: "esm2_plm1280_l4_sae4096.safetensors",
-    baseModel: "[ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
+    baseModel: "[ESM-2 650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
     trainingData: "[UniRef50](https://www.uniprot.org/help/uniref)",
     numHiddenDims: 4096,
     plmLayer: 4,
@@ -435,7 +435,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
   "SAE4096-L8": {
     storagePath: "4096_layer_sweep/esm2_plm1280_l8_sae4096_k64_auxk640",
     huggingFaceModelName: "esm2_plm1280_l8_sae4096.safetensors",
-    baseModel: "[ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
+    baseModel: "[ESM-2 650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
     trainingData: "[UniRef50](https://www.uniprot.org/help/uniref)",
     numHiddenDims: 4096,
     plmLayer: 8,
@@ -446,7 +446,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
   "SAE4096-L12": {
     storagePath: "4096_layer_sweep/esm2_plm1280_l12_sae4096_k64_auxk640",
     huggingFaceModelName: "esm2_plm1280_l12_sae4096.safetensors",
-    baseModel: "[ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
+    baseModel: "[ESM-2 650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
     trainingData: "[UniRef50](https://www.uniprot.org/help/uniref)",
     numHiddenDims: 4096,
     plmLayer: 12,
@@ -457,7 +457,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
   "SAE4096-L16": {
     storagePath: "4096_layer_sweep/esm2_plm1280_l16_sae4096_k64_auxk640",
     huggingFaceModelName: "esm2_plm1280_l16_sae4096.safetensors",
-    baseModel: "[ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
+    baseModel: "[ESM-2 650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
     trainingData: "[UniRef50](https://www.uniprot.org/help/uniref)",
     numHiddenDims: 4096,
     plmLayer: 16,
@@ -468,7 +468,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
   "SAE4096-L20": {
     storagePath: "4096_layer_sweep/esm2_plm1280_l20_sae4096_k64_auxk640",
     huggingFaceModelName: "esm2_plm1280_l20_sae4096.safetensors",
-    baseModel: "[ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
+    baseModel: "[ESM-2 650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
     trainingData: "[UniRef50](https://www.uniprot.org/help/uniref)",
     numHiddenDims: 4096,
     plmLayer: 20,
@@ -479,7 +479,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
   "SAE4096-L28": {
     storagePath: "4096_layer_sweep/esm2_plm1280_l28_sae4096_k64_auxk640",
     huggingFaceModelName: "esm2_plm1280_l28_sae4096.safetensors",
-    baseModel: "[ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
+    baseModel: "[ESM-2 650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
     trainingData: "[UniRef50](https://www.uniprot.org/help/uniref)",
     numHiddenDims: 4096,
     plmLayer: 28,
@@ -490,7 +490,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
   "SAE4096-L32": {
     storagePath: "4096_layer_sweep/esm2_plm1280_l32_sae4096_k64_auxk640",
     huggingFaceModelName: "esm2_plm1280_l32_sae4096.safetensors",
-    baseModel: "[ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
+    baseModel: "[ESM-2 650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
     trainingData: "[UniRef50](https://www.uniprot.org/help/uniref)",
     numHiddenDims: 4096,
     plmLayer: 32,
@@ -501,7 +501,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
   "SAE4096-L33": {
     storagePath: "4096_layer_sweep/esm2_plm1280_l33_sae4096_k64_auxk640",
     huggingFaceModelName: "esm2_plm1280_l33_sae4096.safetensors",
-    baseModel: "[ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
+    baseModel: "[ESM-2 650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
     trainingData: "[UniRef50](https://www.uniprot.org/help/uniref)",
     numHiddenDims: 4096,
     plmLayer: 33,
@@ -511,7 +511,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
   },
   "SAE4096-L24-ab": {
     storagePath: "esm2_plm1280_l24_sae4096_k128_auxk512_antibody_seqs",
-    baseModel: "[ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
+    baseModel: "[ESM-2 650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
     trainingData: "[PLAbDab](https://opig.stats.ox.ac.uk/webapps/plabdab/)",
     numHiddenDims: 4096,
     plmLayer: 24,
@@ -675,7 +675,7 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
   },
   "SAE8192-L24": {
     storagePath: "k_sweep/esm2_plm1280_l24_sae8192_k16_auxk640",
-    baseModel: "[ESM2-650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
+    baseModel: "[ESM-2 650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
     trainingData: "[UniRef50](https://www.uniprot.org/help/uniref)",
     numHiddenDims: 8192,
     plmLayer: 24,
