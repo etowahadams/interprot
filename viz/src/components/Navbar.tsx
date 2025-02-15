@@ -1,8 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Menu, X } from "lucide-react";
-import { DEFAULT_SAE_MODEL } from "@/config";
-import { SAE_CONFIGS } from "@/SAEConfigs";
 import HomeNavigator from "./HomeNavigator";
 import { useIsMobile } from "../hooks/use-mobile";
 
