@@ -22,6 +22,18 @@ pnpm install
 pnpm run dev
 ```
 
+## Generating visualization files
+
+The visualizer and several of our analysis scripts require the generation of files (also referred to as visualization files) which summarize each SAE latent. 
+
+1. Generate the visualization files using `interprot/make_viz_files/__main__.py`
+2. Compute family specificity using `interprot/scripts/run_compute_family_specificity.py`
+2. Classify latents by activation pattern using `interprot/scripts/run_viz_file_analysis.py`. This will also
+compute many more statistics about the latents.
+
+The input sequences to the visualization file generation script can be found [here](https://drive.google.com/file/d/1JwVzxDAlgWNe0qoTKbUozvqBxwcmMebB/view?usp=sharing).
+
+
 ### RunPod endpoints
 
 The RunPod serverless functions live in their own repos:
