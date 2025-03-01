@@ -22,6 +22,13 @@ pnpm install
 pnpm run dev
 ```
 
+### RunPod endpoints
+
+The RunPod serverless functions live in their own repos:
+
+- SAE inference: https://github.com/liambai/sae-inference
+- SAE steering: https://github.com/liambai/sae-steering
+
 ## Generating visualization files
 
 The visualizer and several of our analysis scripts require the generation of files (also referred to as visualization files) which summarize each SAE latent. 
@@ -33,13 +40,6 @@ compute many more statistics about the latents.
 
 The input sequences to the visualization file generation script can be found [here](https://drive.google.com/file/d/1JwVzxDAlgWNe0qoTKbUozvqBxwcmMebB/view?usp=sharing).
 
-
-### RunPod endpoints
-
-The RunPod serverless functions live in their own repos:
-
-- SAE inference: https://github.com/liambai/sae-inference
-- SAE steering: https://github.com/liambai/sae-steering
 
 ## Running and developing the Python package
 
