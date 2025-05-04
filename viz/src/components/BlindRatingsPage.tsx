@@ -8,6 +8,7 @@ import SeqsViewer, { SeqWithSAEActs } from "./SeqsViewer";
 import { STORAGE_ROOT_URL } from "../SAEConfigs";
 import proteinEmoji from "../protein.png";
 import { Download } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
 
 const MODEL1 = "SAE4096-L24";
 const MODEL2 = "SAE4096-L33";
@@ -166,9 +167,7 @@ const BlindRatingsPage: React.FC = () => {
         const processedData: { [key: string]: SeqWithSAEActs[] } = {};
         rangeNames.forEach((rangeName) => {
           if (rangeName in data.ranges) {
-            processedData[rangeName] = data.ranges[
-              rangeName as `${number}-${number}`
-            ].examples.slice(0, 5); // Limit to 5 examples
+            processedData[rangeName] = data.ranges[rangeName as `${number}-${number}`].examples;
           }
         });
 
@@ -351,14 +350,33 @@ const BlindRatingsPage: React.FC = () => {
                             />
                           </div>
                           <MolstarMulti proteins={rangeData[rangeNames[0]]} />
+
+                          <h2 className="text-2xl font-semibold mt-6">
+                            Lower activating sequences
+                          </h2>
+                          <Accordion type="multiple" className="w-full mt-6">
+                            {rangeNames.slice(1).map(
+                              (rangeName) =>
+                                rangeData[rangeName]?.length > 0 && (
+                                  <AccordionItem key={rangeName} value={rangeName}>
+                                    <AccordionTrigger className="text-lg">
+                                      Top sequences in activation range {rangeName}
+                                    </AccordionTrigger>
+                                    <AccordionContent>
+                                      <SeqsViewer seqs={rangeData[rangeName]} />
+                                      <MolstarMulti proteins={rangeData[rangeName]} />
+                                    </AccordionContent>
+                                  </AccordionItem>
+                                )
+                            )}
+                          </Accordion>
                         </>
                       )}
                     </div>
                   )}
                 </Card>
-
                 {/* Sidebar with rating buttons */}
-                <Card className="p-6 mb-6 w-full lg:w-80 h-fit">
+                <Card className="p-6 mb-6 w-full lg:w-80 h-fit sticky top-24">
                   <p className="mb-4 font-medium">How interpretable is this feature?</p>
                   <div className="flex flex-col gap-3">
                     <Button onClick={() => handleRating(0)} variant="outline" className="w-full">
