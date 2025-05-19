@@ -138,7 +138,7 @@ const SAEVisualizerPage: React.FC = () => {
           )}
         </div>
         <div>
-          {featureStats && featureStats.top_pfam.length > 0 && (
+          {featureStats && featureStats.top_pfam && featureStats.top_pfam.length > 0 && (
             <div>
               Highly activating Pfams:{" "}
               {featureStats.top_pfam.map((pfam) => (

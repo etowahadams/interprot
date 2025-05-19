@@ -683,6 +683,16 @@ export const SAE_CONFIGS: Record<string, SAEConfig> = {
     supportsCustomSequence: false,
     curated: [],
   },
+  "ESM-L24": {
+    storagePath: "esm2_l24",
+    baseModel: "[ESM-2 650M](https://huggingface.co/facebook/esm2_t33_650M_UR50D)",
+    trainingData: "[UniRef50](https://www.uniprot.org/help/uniref)",
+    numHiddenDims: 1280,
+    plmLayer: 24,
+    defaultDim: 0,
+    supportsCustomSequence: false,
+    curated: [],
+  },
   // NOTE(liam): Commenting these out cuz they aren't that interesting, leaving one 8192-dim model for now.
   // "SAE8192-L24-K32": {
   //   storagePath: "k_sweep/esm2_plm1280_l24_sae8192_k32_auxk640",

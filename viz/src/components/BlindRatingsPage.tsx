@@ -11,7 +11,7 @@ import { Download } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
 
 const MODEL1 = "SAE4096-L24";
-const MODEL2 = "SAE4096-L33";
+const MODEL2 = "ESM-L24";
 const FEATURES_PER_MODEL = 100;
 
 // Define activation ranges
