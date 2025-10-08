@@ -75,7 +75,7 @@ const MolstarMulti: React.FC<MolstarViewerProps> = ({ proteins }) => {
     isInteractive: boolean = false
   ) => {
     try {
-      const fileName = `https://alphafold.ebi.ac.uk/files/AF-${protein.alphafold_id}-F1-model_v4.cif`;
+      const fileName = `https://alphafold.ebi.ac.uk/files/AF-${protein.alphafold_id}-F1-model_v6.cif`;
 
       const themeName = Math.random().toString(36).substring(7);
       const ResidueColorTheme = createResidueColorTheme(protein.sae_acts, themeName);
