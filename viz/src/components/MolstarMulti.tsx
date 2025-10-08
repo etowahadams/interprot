@@ -100,7 +100,17 @@ const MolstarMulti: React.FC<MolstarViewerProps> = ({ proteins }) => {
       });
 
       if (!isInteractive) {
+        // Wait a bit for the structure to render
         await new Promise((resolve) => setTimeout(resolve, 100));
+        const nextFrame = () =>
+          new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        // Firefox needs this or else there will be a lot of blank images
+        try {
+          (plugin.canvas3d as any)?.webgl?.gl?.flush?.();
+        } catch { }
+        // Wait for a couple of RAFs to let WebGL settle
+        await nextFrame();
+        await nextFrame();
         const canvas = offscreenContainerRef.current?.querySelector("canvas");
         if (!canvas) throw new Error("Canvas not found");
         const imageUrl = canvas.toDataURL("image/png");
