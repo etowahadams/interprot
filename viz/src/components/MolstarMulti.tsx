@@ -204,7 +204,16 @@ const MolstarMulti: React.FC<MolstarViewerProps> = memo(function MolstarMulti({
             ref={(el) => (viewerContainerRefs.current[index] = el)}
           >
             {activeViewerIndices.has(index) ? (
-              <></>
+              <a
+                href={`https://uniprot.org/uniprot/${protein.uniprot_id}`}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm z-10">
+                  {protein.name.length > 30 ? protein.name.substring(0, 32) + "..." : protein.name}
+                </div>
+              </a>
             ) : proteinImages[index] ? (
               <TooltipProvider delayDuration={100}>
                 <Tooltip>
