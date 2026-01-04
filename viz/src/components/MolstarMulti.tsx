@@ -11,11 +11,17 @@ import { SeqWithSAEActs } from "./SeqsViewer";
 
 interface MolstarViewerProps {
   proteins: SeqWithSAEActs[];
+  hoveredProteinId?: string | null;
+  onProteinHover?: (alphafoldId: string | null) => void;
 }
 
 const PROTEIN_CANVAS_SIZE = 400;
 
-const MolstarMulti: React.FC<MolstarViewerProps> = ({ proteins }) => {
+const MolstarMulti: React.FC<MolstarViewerProps> = ({
+  proteins,
+  hoveredProteinId,
+  onProteinHover,
+}) => {
   const [proteinImages, setProteinImages] = useState<(string | null)[]>(
     Array(proteins.length).fill(null)
   );
@@ -107,7 +113,7 @@ const MolstarMulti: React.FC<MolstarViewerProps> = ({ proteins }) => {
         // Firefox needs this or else there will be a lot of blank images
         try {
           (plugin.canvas3d as any)?.webgl?.gl?.flush?.();
-        } catch { }
+        } catch {}
         // Wait for a couple of RAFs to let WebGL settle
         await nextFrame();
         await nextFrame();
@@ -189,8 +195,12 @@ const MolstarMulti: React.FC<MolstarViewerProps> = ({ proteins }) => {
         {proteins.map((protein, index) => (
           <div
             key={protein.alphafold_id}
-            className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer"
+            className={`relative aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer transition-all ${
+              hoveredProteinId === protein.alphafold_id ? "ring-4 ring-blue-400 ring-offset-2" : ""
+            }`}
             onClick={() => handleProteinClick(index)}
+            onMouseEnter={() => onProteinHover?.(protein.alphafold_id)}
+            onMouseLeave={() => onProteinHover?.(null)}
             ref={(el) => (viewerContainerRefs.current[index] = el)}
           >
             {activeViewerIndices.has(index) ? (

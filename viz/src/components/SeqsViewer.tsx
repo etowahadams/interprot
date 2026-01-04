@@ -51,9 +51,16 @@ export interface SeqWithSAEActs {
 interface SeqsViewerProps {
   seqs: SeqWithSAEActs[];
   title?: string;
+  hoveredProteinId?: string | null;
+  onProteinHover?: (alphafoldId: string | null) => void;
 }
 
-export default function SeqsViewer({ seqs, title }: SeqsViewerProps) {
+export default function SeqsViewer({
+  seqs,
+  title,
+  hoveredProteinId,
+  onProteinHover,
+}: SeqsViewerProps) {
   const [alignmentMode, setAlignmentMode] = useState<"first_act" | "max_act" | "msa">("first_act");
   const [alignedSeqs, setAlignedSeqs] = useState<SeqWithSAEActs[]>(seqs);
   const [isAligning, setIsAligning] = useState(false);
@@ -416,7 +423,14 @@ export default function SeqsViewer({ seqs, title }: SeqsViewerProps) {
           <>
             <div>
               {alignedSeqs.map((seq) => (
-                <div key={seq.alphafold_id} className="sticky left-0 z-10 bg-card pl-3 pr-2">
+                <div
+                  key={seq.alphafold_id}
+                  className={`sticky left-0 z-10 pl-3 pr-2 bg-card border-l-4 transition-colors ${
+                    hoveredProteinId === seq.alphafold_id ? "border-blue-500" : "border-transparent"
+                  }`}
+                  onMouseEnter={() => onProteinHover?.(seq.alphafold_id)}
+                  onMouseLeave={() => onProteinHover?.(null)}
+                >
                   <button
                     onClick={() => copySequence(seq.sequence, seq.alphafold_id || "")}
                     className="flex-none hover:bg-muted rounded"
@@ -433,7 +447,11 @@ export default function SeqsViewer({ seqs, title }: SeqsViewerProps) {
             </div>
             <div className="flex-1 overflow-x-auto" ref={containerRef}>
               {alignedSeqs.map((seq) => (
-                <div key={seq.alphafold_id}>
+                <div
+                  key={seq.alphafold_id}
+                  onMouseEnter={() => onProteinHover?.(seq.alphafold_id)}
+                  onMouseLeave={() => onProteinHover?.(null)}
+                >
                   {seq.sequence.split("").map((char, index) => {
                     // Only color if not a gap and has valid activation
                     const color =

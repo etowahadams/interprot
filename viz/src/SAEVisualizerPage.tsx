@@ -1,5 +1,5 @@
 import "./App.css";
-import { useEffect, useState, useContext } from "react";
+import { useEffect, useState, useContext, useCallback } from "react";
 import MolstarMulti from "./components/MolstarMulti";
 import CustomSeqPlayground from "./components/CustomSeqPlayground";
 import { Navigate } from "react-router-dom";
@@ -80,6 +80,11 @@ const SAEVisualizerPage: React.FC = () => {
   const [rangeData, setRangeData] = useState<{ [key: string]: SeqWithSAEActs[] }>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isDeadLatent, setIsDeadLatent] = useState(false);
+  const [hoveredProteinId, setHoveredProteinId] = useState<string | null>(null);
+
+  const handleProteinHover = useCallback((alphafoldId: string | null) => {
+    setHoveredProteinId(alphafoldId);
+  }, []);
 
   useEffect(() => {
     const fileURL = `${STORAGE_ROOT_URL}/${SAEConfig.storagePath}/${feature}.json`;
@@ -186,8 +191,17 @@ const SAEVisualizerPage: React.FC = () => {
               <>
                 {!isLoading && (
                   <>
-                    <SeqsViewer seqs={rangeData[rangeNames[0]]} title="Top activating sequences" />
-                    <MolstarMulti proteins={rangeData[rangeNames[0]]} />
+                    <SeqsViewer
+                      seqs={rangeData[rangeNames[0]]}
+                      title="Top activating sequences"
+                      hoveredProteinId={hoveredProteinId}
+                      onProteinHover={handleProteinHover}
+                    />
+                    <MolstarMulti
+                      proteins={rangeData[rangeNames[0]]}
+                      hoveredProteinId={hoveredProteinId}
+                      onProteinHover={handleProteinHover}
+                    />
                     <h2 className="text-2xl font-semibold mt-6">Lower activating sequences</h2>
                     <Accordion type="multiple" className="w-full mt-6">
                       {rangeNames.slice(1).map(
@@ -198,8 +212,16 @@ const SAEVisualizerPage: React.FC = () => {
                                 Top sequences in activation range {rangeName}
                               </AccordionTrigger>
                               <AccordionContent>
-                                <SeqsViewer seqs={rangeData[rangeName]} />
-                                <MolstarMulti proteins={rangeData[rangeName]} />
+                                <SeqsViewer
+                                  seqs={rangeData[rangeName]}
+                                  hoveredProteinId={hoveredProteinId}
+                                  onProteinHover={handleProteinHover}
+                                />
+                                <MolstarMulti
+                                  proteins={rangeData[rangeName]}
+                                  hoveredProteinId={hoveredProteinId}
+                                  onProteinHover={handleProteinHover}
+                                />
                               </AccordionContent>
                             </AccordionItem>
                           )
