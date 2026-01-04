@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, memo } from "react";
 import { redColorMapHex } from "@/utils";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -55,7 +55,7 @@ interface SeqsViewerProps {
   onProteinHover?: (alphafoldId: string | null) => void;
 }
 
-export default function SeqsViewer({
+const SeqsViewer = memo(function SeqsViewer({
   seqs,
   title,
   hoveredProteinId,
@@ -504,4 +504,6 @@ export default function SeqsViewer({
       </div>
     </>
   );
-}
+});
+
+export default SeqsViewer;

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, memo } from "react";
 import { DefaultPluginSpec } from "molstar/lib/mol-plugin/spec";
 import { PluginContext } from "molstar/lib/mol-plugin/context";
 import { CustomElementProperty } from "molstar/lib/mol-model-props/common/custom-element-property";
@@ -7,7 +7,7 @@ import { Color } from "molstar/lib/mol-util/color";
 import proteinEmoji from "../protein.png";
 import { redColorMapRGB } from "@/utils.ts";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { SeqWithSAEActs } from "./SeqsViewer";
+import type { SeqWithSAEActs } from "./SeqsViewer";
 
 interface MolstarViewerProps {
   proteins: SeqWithSAEActs[];
@@ -17,11 +17,11 @@ interface MolstarViewerProps {
 
 const PROTEIN_CANVAS_SIZE = 400;
 
-const MolstarMulti: React.FC<MolstarViewerProps> = ({
+const MolstarMulti: React.FC<MolstarViewerProps> = memo(function MolstarMulti({
   proteins,
   hoveredProteinId,
   onProteinHover,
-}) => {
+}) {
   const [proteinImages, setProteinImages] = useState<(string | null)[]>(
     Array(proteins.length).fill(null)
   );
@@ -196,7 +196,7 @@ const MolstarMulti: React.FC<MolstarViewerProps> = ({
           <div
             key={protein.alphafold_id}
             className={`relative aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer transition-all ${
-              hoveredProteinId === protein.alphafold_id ? "ring-4 ring-blue-400 ring-offset-2" : ""
+              hoveredProteinId === protein.alphafold_id ? "ring-2 ring-blue-400 ring-offset-2" : ""
             }`}
             onClick={() => handleProteinClick(index)}
             onMouseEnter={() => onProteinHover?.(protein.alphafold_id)}
@@ -243,6 +243,6 @@ const MolstarMulti: React.FC<MolstarViewerProps> = ({
       </div>
     </div>
   );
-};
+});
 
 export default MolstarMulti;

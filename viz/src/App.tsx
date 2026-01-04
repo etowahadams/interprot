@@ -1,14 +1,26 @@
 import "./App.css";
+import { lazy, Suspense } from "react";
 import { createHashRouter, RouterProvider, Navigate } from "react-router-dom";
 import LandingPage from "./components/LandingPage";
-import SAEVisualizerPage from "./SAEVisualizerPage";
 import ErrorBoundary from "./components/ErrorBoundary";
-import CustomSeqSearchPage from "./components/CustomSeqSearchPage";
-import AboutPage from "./components/AboutPage";
-import BlindRatingsPage from "./components/BlindRatingsPage";
 import { SAEProvider } from "./SAEContext";
 import { DEFAULT_SAE_MODEL } from "./config";
 import { SAE_CONFIGS } from "./SAEConfigs";
+import proteinEmoji from "./protein.png";
+
+// Lazy load heavy pages that use Molstar/Recharts
+const SAEVisualizerPage = lazy(() => import("./SAEVisualizerPage"));
+const CustomSeqSearchPage = lazy(() => import("./components/CustomSeqSearchPage"));
+const AboutPage = lazy(() => import("./components/AboutPage"));
+const BlindRatingsPage = lazy(() => import("./components/BlindRatingsPage"));
+
+function LoadingFallback() {
+  return (
+    <div className="flex items-center justify-center w-full h-screen">
+      <img src={proteinEmoji} alt="Loading..." className="w-12 h-12 animate-wiggle" />
+    </div>
+  );
+}
 
 const router = createHashRouter([
   {
@@ -17,11 +29,19 @@ const router = createHashRouter([
   },
   {
     path: "/about",
-    element: <AboutPage />,
+    element: (
+      <Suspense fallback={<LoadingFallback />}>
+        <AboutPage />
+      </Suspense>
+    ),
   },
   {
     path: "/blind-ratings",
-    element: <BlindRatingsPage />,
+    element: (
+      <Suspense fallback={<LoadingFallback />}>
+        <BlindRatingsPage />
+      </Suspense>
+    ),
   },
   {
     path: "/sae-viz",
@@ -36,7 +56,9 @@ const router = createHashRouter([
     path: "/sae-viz/:model/",
     element: (
       <SAEProvider>
-        <CustomSeqSearchPage />
+        <Suspense fallback={<LoadingFallback />}>
+          <CustomSeqSearchPage />
+        </Suspense>
       </SAEProvider>
     ),
   },
@@ -44,7 +66,9 @@ const router = createHashRouter([
     path: "/sae-viz/:model/:feature",
     element: (
       <SAEProvider>
-        <SAEVisualizerPage />
+        <Suspense fallback={<LoadingFallback />}>
+          <SAEVisualizerPage />
+        </Suspense>
       </SAEProvider>
     ),
   },

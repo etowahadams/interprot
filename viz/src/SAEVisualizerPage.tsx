@@ -8,7 +8,8 @@ import proteinEmoji from "./protein.png";
 import { SAEContext } from "./SAEContext";
 import { NUM_SEQS_TO_DISPLAY } from "./config";
 import { CONTRIBUTORS, STORAGE_ROOT_URL } from "./SAEConfigs";
-import SeqsViewer, { SeqWithSAEActs } from "./components/SeqsViewer";
+import SeqsViewer from "./components/SeqsViewer";
+import type { SeqWithSAEActs } from "./components/SeqsViewer";
 import {
   Accordion,
   AccordionContent,
@@ -121,7 +122,7 @@ const SAEVisualizerPage: React.FC = () => {
 
   return (
     <>
-      <main className="text-left max-w-full overflow-x-auto w-full">
+      <main className="text-left max-w-7xl mx-auto overflow-x-auto w-full">
         <div className="flex justify-between items-center mt-3 mb-3">
           <h1 className="text-3xl font-semibold md:mt-0 mt-16">Feature {feature}</h1>
           {featureStats && (
