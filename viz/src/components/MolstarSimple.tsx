@@ -1,10 +1,9 @@
-import React, { useEffect, useRef } from "react";
-import { DefaultPluginSpec } from "molstar/lib/mol-plugin/spec";
+import React, { useEffect, useRef, useState } from "react";
 import { PluginContext } from "molstar/lib/mol-plugin/context";
 import { CustomElementProperty } from "molstar/lib/mol-model-props/common/custom-element-property";
 import { Model, ElementIndex } from "molstar/lib/mol-model/structure";
 import { Color } from "molstar/lib/mol-util/color";
-import { redColorMapRGB } from "@/utils.ts";
+import { redColorMapRGB, createMolstarSpec, parseMolstarLabel } from "@/utils.ts";
 
 interface MolstarViewerProps {
   cifData: File | string;
@@ -23,6 +22,7 @@ const MolstarSimple: React.FC<MolstarViewerProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const pluginRef = useRef<PluginContext | null>(null);
+  const [hoverLabel, setHoverLabel] = useState<string | null>(null);
   // Custom color theme
   const ResidueColorTheme = CustomElementProperty.create({
     label: "Residue Colors",
@@ -53,10 +53,18 @@ const MolstarSimple: React.FC<MolstarViewerProps> = ({
     const canvas = document.createElement("canvas");
     element.appendChild(canvas);
 
-    const spec = DefaultPluginSpec();
+    const spec = createMolstarSpec();
     const plugin = new PluginContext(spec);
     await plugin.init();
     plugin.initViewer(canvas, element);
+
+    // Enable residue-level hover labels
+    plugin.managers.interactivity.setProps({ granularity: "residue" });
+
+    // Subscribe to hover labels
+    plugin.behaviors.labels.highlight.subscribe(({ labels }) => {
+      setHoverLabel(labels.length > 0 ? parseMolstarLabel(String(labels[0])) : null);
+    });
 
     plugin.representation.structure.themes.colorThemeRegistry.add(
       ResidueColorTheme.colorThemeProvider!
@@ -124,7 +132,15 @@ const MolstarSimple: React.FC<MolstarViewerProps> = ({
     };
   }, [cifData, colors]);
 
-  return <div ref={containerRef} className={className} style={{ width, height }} />;
+  return (
+    <div ref={containerRef} className={`relative ${className}`} style={{ width, height }}>
+      {hoverLabel && (
+        <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-sm pointer-events-none z-20">
+          {hoverLabel}
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default MolstarSimple;

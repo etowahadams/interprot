@@ -1,4 +1,47 @@
 import { getSAEDimActivations } from "./runpod";
+import { DefaultPluginSpec } from "molstar/lib/mol-plugin/spec";
+
+/**
+ * Creates a Molstar plugin spec with common configuration:
+ * - Axes disabled
+ * - Transparent background
+ */
+export function createMolstarSpec() {
+  const spec = DefaultPluginSpec();
+  spec.canvas3d = {
+    camera: {
+      helper: {
+        axes: { name: "off", params: {} },
+      },
+    },
+    transparentBackground: true,
+  };
+  return spec;
+}
+
+/**
+ * Parses Molstar's HTML label and extracts just the residue identity.
+ * Input example: "C-X-C motif chemokine 16</br><small>AF-Q29RT9-F1</small> | <small>Model 1</small> | <small>Instance 1_555</small> | <b>A</b> | <b>LEU 13</b><b></b>"
+ * Output example: "LEU 13" or "LEU 13 (Chain A)" if showChain is true
+ */
+export function parseMolstarLabel(htmlLabel: string, showChain: boolean = false): string {
+  // Extract chain ID - look for pattern like <b>A</b> where A is a single letter or short string
+  const chainMatch = htmlLabel.match(/<b>([A-Za-z0-9]{1,3})<\/b>\s*\|\s*<b>([A-Z]{3}\s*\d+)<\/b>/);
+  if (chainMatch) {
+    const chain = chainMatch[1];
+    const residue = chainMatch[2];
+    return showChain ? `${residue} (Chain ${chain})` : residue;
+  }
+
+  // Fallback: just extract the last <b>RESIDUE NUM</b> pattern
+  const residueMatch = htmlLabel.match(/<b>([A-Z]{3}\s*\d+)<\/b>/);
+  if (residueMatch) {
+    return residueMatch[1];
+  }
+
+  // Last resort: strip all HTML tags
+  return htmlLabel.replace(/<[^>]*>/g, "").trim();
+}
 
 export function redColorMapRGB(value: number, maxValue: number) {
   // Ensure value is between 0 and maxValue

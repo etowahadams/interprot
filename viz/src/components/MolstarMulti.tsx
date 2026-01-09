@@ -1,11 +1,10 @@
 import React, { useEffect, useRef, useState, memo } from "react";
-import { DefaultPluginSpec } from "molstar/lib/mol-plugin/spec";
 import { PluginContext } from "molstar/lib/mol-plugin/context";
 import { CustomElementProperty } from "molstar/lib/mol-model-props/common/custom-element-property";
 import { Model, ElementIndex } from "molstar/lib/mol-model/structure";
 import { Color } from "molstar/lib/mol-util/color";
 import proteinEmoji from "../protein.png";
-import { redColorMapRGB } from "@/utils.ts";
+import { redColorMapRGB, createMolstarSpec, parseMolstarLabel } from "@/utils.ts";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { SeqWithSAEActs } from "./SeqsViewer";
 
@@ -26,6 +25,7 @@ const MolstarMulti: React.FC<MolstarViewerProps> = memo(function MolstarMulti({
     Array(proteins.length).fill(null)
   );
   const [activeViewerIndices, setActiveViewerIndices] = useState<Set<number>>(new Set());
+  const [hoverLabels, setHoverLabels] = useState<Map<number, string | null>>(new Map());
   const pluginRef = useRef<PluginContext | null>(null);
   const activePluginsRef = useRef<Map<number, PluginContext>>(new Map());
   const offscreenContainerRef = useRef<HTMLDivElement>(null);
@@ -60,16 +60,31 @@ const MolstarMulti: React.FC<MolstarViewerProps> = memo(function MolstarMulti({
     });
   };
 
-  const initViewer = async (element: HTMLDivElement) => {
+  const initViewer = async (element: HTMLDivElement, interactiveIndex?: number) => {
     const canvas = document.createElement("canvas");
     canvas.width = PROTEIN_CANVAS_SIZE;
     canvas.height = PROTEIN_CANVAS_SIZE;
     element.appendChild(canvas);
 
-    const spec = DefaultPluginSpec();
+    const spec = createMolstarSpec();
     const plugin = new PluginContext(spec);
     await plugin.init();
     plugin.initViewer(canvas, element);
+
+    // Only set up hover labels for interactive viewers
+    if (interactiveIndex !== undefined) {
+      plugin.managers.interactivity.setProps({ granularity: "residue" });
+      plugin.behaviors.labels.highlight.subscribe(({ labels }) => {
+        setHoverLabels((prev) => {
+          const newMap = new Map(prev);
+          newMap.set(
+            interactiveIndex,
+            labels.length > 0 ? parseMolstarLabel(String(labels[0])) : null
+          );
+          return newMap;
+        });
+      });
+    }
 
     return plugin;
   };
@@ -159,7 +174,7 @@ const MolstarMulti: React.FC<MolstarViewerProps> = memo(function MolstarMulti({
     if (!viewerContainer) return;
 
     try {
-      const plugin = await initViewer(viewerContainer);
+      const plugin = await initViewer(viewerContainer, index);
       activePluginsRef.current.set(index, plugin);
       await loadStructure(plugin, proteins[index], index, true);
       setActiveViewerIndices((prev) => {
@@ -204,16 +219,25 @@ const MolstarMulti: React.FC<MolstarViewerProps> = memo(function MolstarMulti({
             ref={(el) => (viewerContainerRefs.current[index] = el)}
           >
             {activeViewerIndices.has(index) ? (
-              <a
-                href={`https://uniprot.org/uniprot/${protein.uniprot_id}`}
-                target="_blank"
-                rel="noreferrer"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm z-10">
-                  {protein.name.length > 30 ? protein.name.substring(0, 32) + "..." : protein.name}
-                </div>
-              </a>
+              <>
+                {hoverLabels.get(index) && (
+                  <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-sm pointer-events-none z-20">
+                    {hoverLabels.get(index)}
+                  </div>
+                )}
+                <a
+                  href={`https://uniprot.org/uniprot/${protein.uniprot_id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded text-sm z-10">
+                    {protein.name.length > 30
+                      ? protein.name.substring(0, 32) + "..."
+                      : protein.name}
+                  </div>
+                </a>
+              </>
             ) : proteinImages[index] ? (
               <TooltipProvider delayDuration={100}>
                 <Tooltip>

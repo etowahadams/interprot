@@ -1,12 +1,18 @@
 import { useState, useEffect, useRef } from "react";
-import { DefaultPluginSpec } from "molstar/lib/mol-plugin/spec";
 import { PluginContext } from "molstar/lib/mol-plugin/context";
 import { CustomElementProperty } from "molstar/lib/mol-model-props/common/custom-element-property";
 import { Model, ElementIndex } from "molstar/lib/mol-model/structure";
 import { Color } from "molstar/lib/mol-util/color";
 import proteinEmoji from "../protein.png";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { AminoAcidSequence, ProteinActivationsData, StructureCache, redColorMapRGB } from "@/utils";
+import {
+  AminoAcidSequence,
+  ProteinActivationsData,
+  StructureCache,
+  redColorMapRGB,
+  createMolstarSpec,
+  parseMolstarLabel,
+} from "@/utils";
 
 interface CustomStructureViewerProps {
   viewerId: string;
@@ -22,6 +28,7 @@ const CustomStructureViewer = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [warning, setWarning] = useState("");
+  const [hoverLabel, setHoverLabel] = useState<string | null>(null);
   const isMobile = useIsMobile();
   const pluginRef = useRef<PluginContext | null>(null);
 
@@ -110,11 +117,17 @@ const CustomStructureViewer = ({
       const canvas = document.createElement("canvas");
       container.appendChild(canvas);
 
-      const plugin = new PluginContext(DefaultPluginSpec());
+      const plugin = new PluginContext(createMolstarSpec());
       pluginRef.current = plugin;
 
       await plugin.init();
       plugin.initViewer(canvas, container as HTMLDivElement);
+
+      // Enable residue-level hover labels
+      plugin.managers.interactivity.setProps({ granularity: "residue" });
+      plugin.behaviors.labels.highlight.subscribe(({ labels }) => {
+        setHoverLabel(labels.length > 0 ? parseMolstarLabel(String(labels[0])) : null);
+      });
 
       const themeName = Math.random().toString(36).substring(7);
       const ResidueColorTheme = createResidueColorTheme(activations, themeName);
@@ -193,15 +206,22 @@ const CustomStructureViewer = ({
     );
   }
   return (
-    <div>
+    <div className="relative">
       {!error && (
         <div
           id={viewerId}
+          className="relative"
           style={{
             width: "100%",
             height: warning || error ? 0 : isMobile ? 300 : 400,
           }}
-        />
+        >
+          {hoverLabel && (
+            <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-sm pointer-events-none z-20">
+              {hoverLabel}
+            </div>
+          )}
+        </div>
       )}
       {warning ? (
         <small className="text-yellow-500">{warning}</small>
