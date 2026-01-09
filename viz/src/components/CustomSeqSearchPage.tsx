@@ -27,9 +27,10 @@ import {
 } from "@/utils";
 import useUrlState from "@/hooks/useUrlState";
 import { SAEContext } from "@/SAEContext";
-import { SAE_CONFIGS } from "@/SAEConfigs";
+import { SAE_CONFIGS, CuratedFeature } from "@/SAEConfigs";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -51,6 +52,7 @@ type UrlState = {
   minPctAct: number;
   maxPctAct: number;
   sortBy: string;
+  hideAA: string;
 };
 
 export default function CustomSeqSearchPage() {
@@ -76,6 +78,15 @@ export default function CustomSeqSearchPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [chains, setChains] = useState<PDBChainsData[]>([]);
 
+  const aminoAcidIdentityDims = useMemo(() => {
+    const curated = SAE_CONFIGS[model]?.curated || [];
+    return new Set(
+      curated
+        .filter((f: CuratedFeature) => f.group === "amino acid identity")
+        .map((f: CuratedFeature) => f.dim)
+    );
+  }, [model]);
+
   const applyFilters = () => {
     setUrlState({
       start: startPos,
@@ -98,6 +109,7 @@ export default function CustomSeqSearchPage() {
       end: undefined,
       minPctAct: undefined,
       maxPctAct: undefined,
+      hideAA: undefined, // undefined means filter is ON (default)
     });
     setCurrentPage(1);
     setIsFilterOpen(false);
@@ -105,6 +117,11 @@ export default function CustomSeqSearchPage() {
 
   const filteredResults = useMemo(() => {
     return searchResults.filter((result) => {
+      // Filter out amino acid identity features (default on, hideAA !== "0")
+      if (urlState.hideAA !== "0" && aminoAcidIdentityDims.has(result.dim)) {
+        return false;
+      }
+
       if (!urlState.start && !urlState.end && !urlState.minPctAct && !urlState.maxPctAct)
         return true;
       const hasActivationInRange = result.sae_acts.some((act, pos) => {
@@ -123,7 +140,15 @@ export default function CustomSeqSearchPage() {
 
       return hasActivationInRange;
     });
-  }, [searchResults, urlState.start, urlState.end, urlState.minPctAct, urlState.maxPctAct]);
+  }, [
+    searchResults,
+    urlState.start,
+    urlState.end,
+    urlState.minPctAct,
+    urlState.maxPctAct,
+    urlState.hideAA,
+    aminoAcidIdentityDims,
+  ]);
 
   const totalPages = Math.ceil(filteredResults.length / RESULTS_PER_PAGE);
   const currentResults = filteredResults.slice(
@@ -331,13 +356,25 @@ export default function CustomSeqSearchPage() {
                           {(urlState.start ||
                             urlState.end ||
                             urlState.minPctAct ||
-                            urlState.maxPctAct) && (
+                            urlState.maxPctAct ||
+                            urlState.hideAA === "0") && (
                             <span className="ml-1 h-2 w-2 rounded-full bg-primary"></span>
                           )}
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent className="w-80">
                         <DropdownMenuLabel>Filter Results</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuCheckboxItem
+                          checked={urlState.hideAA !== "0"}
+                          onCheckedChange={(checked) => {
+                            setUrlState({ hideAA: checked ? undefined : "0" });
+                            setCurrentPage(1);
+                          }}
+                          onSelect={(e) => e.preventDefault()}
+                        >
+                          Hide amino acid identity features
+                        </DropdownMenuCheckboxItem>
                         <DropdownMenuSeparator />
                         <div className="p-4 space-y-4">
                           <div className="space-y-2">
