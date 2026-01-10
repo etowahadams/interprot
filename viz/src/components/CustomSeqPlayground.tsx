@@ -72,8 +72,9 @@ const CustomSeqPlayground = () => {
     []
   );
 
-  // Reset some states when the user navigates to a new feature
+  // Reset all states when the user navigates to a new feature
   useEffect(() => {
+    setCustomSeqInput(initialState.proteinInput);
     setInputProteinActivations(initialState.inputProteinActivations);
     setViewerState(initialState.playgroundState);
     setSteeredSeq(initialState.steeredSeq);

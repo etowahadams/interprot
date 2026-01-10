@@ -5,7 +5,7 @@ import {
   HUGGINGFACE_REPO_URL,
   SAE_CONFIGS,
 } from "../SAEConfigs";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Select,
   SelectContent,
@@ -28,11 +28,10 @@ import { Toggle } from "@/components/ui/toggle";
 import { Dices, Search } from "lucide-react";
 import { SAEContext } from "../SAEContext";
 import Markdown from "@/components/Markdown";
-import { useNavigateWithSeqContext } from "@/hooks/useNagivateWithQueryParams";
 
 export default function SAESidebar() {
   const { setOpenMobile } = useSidebar();
-  const navigate = useNavigateWithSeqContext();
+  const navigate = useNavigate();
   const { model, feature, SAEConfig } = useContext(SAEContext);
 
   const handleFeatureChange = (feature: number) => {
