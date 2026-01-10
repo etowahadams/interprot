@@ -364,6 +364,12 @@
       "dim": 2763,
       "desc": "Activates on disordered regions",
       "group": "disordered"
+    },
+    {
+      "name": "transmembrane",
+      "dim": 2020,
+      "desc": "Activates on the transmembrane region of receptors",
+      "group": "structural"
     }
   ],
   "SAE4096-L4": [],
