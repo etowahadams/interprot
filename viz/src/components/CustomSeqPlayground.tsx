@@ -16,6 +16,7 @@ import useUrlState from "@/hooks/useUrlState";
 import FullSeqsViewer from "./FullSeqsViewer";
 import PDBStructureViewer from "./PDBStructureViewer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+// Note: FullSeqsViewer is still used for the steered protein section
 import { SAEContext } from "@/SAEContext";
 
 enum PlaygroundState {
@@ -137,21 +138,13 @@ const CustomSeqPlayground = () => {
         />
       </div>
 
-      {/* Once we have SAE activations, display sequence and structure */}
+      {/* Once we have SAE activations, display structure with integrated sequence viewer */}
       {Object.keys(inputProteinActivations).length > 0 && (
         <>
-          <Card className="my-4">
-            <CardHeader>
-              <CardTitle>SAE activations on input protein</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <FullSeqsViewer proteinActivationsData={inputProteinActivations} />
-            </CardContent>
-          </Card>
           {inputProteinActivations.chains.every((chain) =>
             chain.activations.every((activation) => activation === 0)
           ) && (
-            <p className="text-sm mb-2">
+            <p className="text-sm mb-2 mt-4">
               This feature did not activate on your sequence. Try a sequence more similar to the
               ones below.
             </p>
