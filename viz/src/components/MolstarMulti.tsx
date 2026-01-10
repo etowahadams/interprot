@@ -113,10 +113,10 @@ const MolstarMulti: React.FC<MolstarViewerProps> = memo(function MolstarMulti({
     const elements: StructureElement.Loci["elements"][number][] = [];
     for (const unit of structure.units) {
       if (!Unit.isAtomic(unit)) continue;
-      const indices: number[] = [];
+      const indices: StructureElement.UnitIndex[] = [];
       for (let i = 0, _i = unit.elements.length; i < _i; i++) {
         if (unit.getResidueIndex(i as StructureElement.UnitIndex) === residueIndex) {
-          indices.push(i);
+          indices.push(i as StructureElement.UnitIndex);
         }
       }
       if (indices.length > 0) {
