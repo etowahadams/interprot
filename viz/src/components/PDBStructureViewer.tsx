@@ -12,7 +12,6 @@ import {
 import proteinEmoji from "../protein.png";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { StructureCache, PDBID } from "@/utils";
-import { AtomicHierarchy } from "molstar/lib/mol-model/structure/model/properties/atomic/hierarchy";
 
 interface PDBStructureViewerProps {
   viewerId: string;
@@ -55,22 +54,22 @@ const PDBStructureViewer = ({
       name,
       getData(model: Model) {
         const map = new Map<ElementIndex, { residueIdx: number; chainId: string }>();
-        const { chains, residueAtomSegments, chainAtomSegments } = model.atomicHierarchy;
+        const { chains, residues, residueAtomSegments, chainAtomSegments } = model.atomicHierarchy;
 
-        // Map each residue to its index on the chain. TODO: There might be a better way to do
-        // this than iterating over all atoms.
+        // Map each atom to its residue's sequence position and chain.
+        // We use auth_seq_id (PDB residue number) to index into the activation array,
+        // since the activations are indexed by canonical sequence position (1-based in PDB).
         for (let i = 0, _i = model.atomicHierarchy.atoms._rowCount; i < _i; i++) {
           const residueIdx = residueAtomSegments.index[i];
           const chainIdx = chainAtomSegments.index[i];
           const chainId = chains.auth_asym_id.value(chainIdx);
-          const chainStartResidue = AtomicHierarchy.chainStartResidueIndex(
-            { residueAtomSegments, chainAtomSegments },
-            chainIdx
-          );
-          const relativeResidueIdx = residueIdx - chainStartResidue;
+          // Use the PDB residue number (auth_seq_id) to get the sequence position.
+          // Subtract 1 to convert from 1-based PDB numbering to 0-based array indexing.
+          const seqId = residues.auth_seq_id.value(residueIdx);
+          const sequenceIndex = seqId - 1;
 
           map.set(i as ElementIndex, {
-            residueIdx: relativeResidueIdx,
+            residueIdx: sequenceIndex,
             chainId,
           });
         }
