@@ -10,7 +10,7 @@ interface SuggestFeatureRequest {
   name: string;
   description: string;
   group: string;
-  contributorName: string;
+  contributorName?: string;
   contributorLink?: string;
 }
 
@@ -198,8 +198,8 @@ function validateRequest(data: unknown): SuggestFeatureRequest {
   if (typeof req.group !== "string" || !req.group) {
     throw new Error("group is required");
   }
-  if (typeof req.contributorName !== "string" || !req.contributorName) {
-    throw new Error("contributorName is required");
+  if (req.contributorName !== undefined && typeof req.contributorName !== "string") {
+    throw new Error("contributorName must be a string if provided");
   }
   if (req.contributorLink !== undefined && typeof req.contributorLink !== "string") {
     throw new Error("contributorLink must be a string if provided");
@@ -211,7 +211,7 @@ function validateRequest(data: unknown): SuggestFeatureRequest {
     name: req.name,
     description: req.description,
     group: req.group,
-    contributorName: req.contributorName,
+    contributorName: (req.contributorName as string) || undefined,
     contributorLink: req.contributorLink as string | undefined,
   };
 }
@@ -297,14 +297,18 @@ export default {
         dim: data.dim,
         desc: data.description,
         group: data.group,
-        contributor: data.contributorName,
       };
+
+      // Only add contributor if provided (non-anonymous)
+      if (data.contributorName) {
+        newFeature.contributor = data.contributorName;
+      }
 
       curatedFeatures[data.model].push(newFeature);
 
-      // Update contributors if new
+      // Update contributors if new (only if name and link provided)
       let contributorsUpdated = false;
-      if (data.contributorLink && !(data.contributorName in contributors)) {
+      if (data.contributorName && data.contributorLink && !(data.contributorName in contributors)) {
         contributors[data.contributorName] = data.contributorLink;
         contributorsUpdated = true;
       }
@@ -351,6 +355,10 @@ export default {
       }
 
       // Create pull request
+      const suggestedBy = data.contributorName
+        ? `${data.contributorName}${data.contributorLink ? ` (${data.contributorLink})` : ""}`
+        : "Anonymous";
+
       const prUrl = await createPullRequest(
         GITHUB_OWNER,
         GITHUB_REPO,
@@ -361,7 +369,7 @@ export default {
 **Feature Dimension:** ${data.dim}
 **Name:** ${data.name}
 **Group:** ${data.group}
-**Suggested by:** ${data.contributorName}${data.contributorLink ? ` (${data.contributorLink})` : ""}
+**Suggested by:** ${suggestedBy}
 
 ### Description
 ${data.description}

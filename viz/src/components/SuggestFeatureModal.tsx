@@ -34,7 +34,9 @@ const GROUP_OPTIONS = [
   { value: "other", label: "Other" },
 ];
 
-const API_URL = import.meta.env.VITE_SUGGEST_FEATURE_API_URL;
+const API_URL =
+  import.meta.env.VITE_SUGGEST_FEATURE_API_URL ||
+  "https://interprot-suggest-feature.interprot.workers.dev";
 
 export default function SuggestFeatureModal({
   open,
@@ -75,7 +77,7 @@ export default function SuggestFeatureModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!name || !description || !group || !contributorName) {
+    if (!name || !description || !group) {
       return;
     }
 
@@ -100,7 +102,7 @@ export default function SuggestFeatureModal({
           name,
           description,
           group: finalGroup,
-          contributorName,
+          contributorName: contributorName || undefined,
           contributorLink: contributorLink || undefined,
         }),
       });
@@ -129,8 +131,7 @@ export default function SuggestFeatureModal({
     }
   };
 
-  const isFormValid =
-    name && description && group && contributorName && (group !== "other" || customGroup);
+  const isFormValid = name && description && group && (group !== "other" || customGroup);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -232,12 +233,12 @@ export default function SuggestFeatureModal({
               )}
 
               <div className="grid gap-2">
-                <Label htmlFor="contributorName">Your Name *</Label>
+                <Label htmlFor="contributorName">Your Name (optional)</Label>
                 <Input
                   id="contributorName"
                   value={contributorName}
                   onChange={(e) => setContributorName(e.target.value)}
-                  placeholder="How you'd like to be credited"
+                  placeholder="Leave blank for anonymous submission"
                 />
               </div>
 
