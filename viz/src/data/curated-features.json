@@ -364,6 +364,13 @@
       "dim": 2763,
       "desc": "Activates on disordered regions",
       "group": "disordered"
+    },
+    {
+      "name": "test",
+      "dim": 2020,
+      "desc": "test",
+      "group": "structural",
+      "contributor": "Liam"
     }
   ],
   "SAE4096-L4": [],
