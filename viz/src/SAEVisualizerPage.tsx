@@ -126,11 +126,11 @@ const SAEVisualizerPage: React.FC = () => {
   return (
     <>
       <main className="text-left max-w-7xl mx-auto overflow-x-auto w-full">
-        <div className="flex justify-between items-center mt-3 mb-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mt-3 mb-3">
           <h1 className="text-3xl font-semibold md:mt-0 mt-16">Feature {feature}</h1>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 w-full sm:w-auto">
             {featureStats && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span>Activation frequency: {(featureStats.freq_active * 100).toFixed(2)}% </span>
                 <TooltipProvider>
                   <Tooltip>
@@ -146,7 +146,12 @@ const SAEVisualizerPage: React.FC = () => {
                 </TooltipProvider>
               </div>
             )}
-            <Button variant="outline" size="sm" onClick={() => setSuggestModalOpen(true)}>
+            <Button
+              className="w-full sm:w-auto"
+              variant="outline"
+              size="sm"
+              onClick={() => setSuggestModalOpen(true)}
+            >
               Suggest as Curated
             </Button>
           </div>
