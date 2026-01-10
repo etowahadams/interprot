@@ -613,7 +613,7 @@ const MolstarMulti: React.FC<MolstarViewerProps> = memo(function MolstarMulti({
 
                 <div className="rounded-lg border bg-white p-3">
                   <div
-                    className="overflow-x-auto overflow-y-visible"
+                    className="max-h-[32vh] overflow-x-auto overflow-y-auto"
                     onMouseLeave={() => setSequenceHoverIndex(null)}
                     ref={sequenceContainerRef}
                   >
