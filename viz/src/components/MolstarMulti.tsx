@@ -17,6 +17,7 @@ import { redColorMapRGB, redColorMapHex, createMolstarSpec, parseMolstarLabel } 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { SeqWithSAEActs } from "./SeqsViewer";
 import { useSearchParams } from "react-router-dom";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface MolstarViewerProps {
   proteins: SeqWithSAEActs[];
@@ -41,6 +42,7 @@ const MolstarMulti: React.FC<MolstarViewerProps> = memo(function MolstarMulti({
   const [structureHoverIndex, setStructureHoverIndex] = useState<number | null>(null);
   const [sequenceHoverIndex, setSequenceHoverIndex] = useState<number | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const isMobile = useIsMobile();
   const [blocksPerRow, setBlocksPerRow] = useState(4);
   const pluginRef = useRef<PluginContext | null>(null);
   const activePluginsRef = useRef<Map<number, PluginContext>>(new Map());
@@ -108,7 +110,7 @@ const MolstarMulti: React.FC<MolstarViewerProps> = memo(function MolstarMulti({
   };
 
   const getResidueLoci = (structure: Structure, residueIndex: number) => {
-    const elements: StructureElement.Loci["elements"] = [];
+    const elements: StructureElement.Loci["elements"][number][] = [];
     for (const unit of structure.units) {
       if (!Unit.isAtomic(unit)) continue;
       const indices: number[] = [];
@@ -271,9 +273,15 @@ const MolstarMulti: React.FC<MolstarViewerProps> = memo(function MolstarMulti({
   useEffect(() => {
     const legacyUniprot = searchParams.get("zoomUniprot");
     const urlUniprot = searchParams.get("uniprot") ?? legacyUniprot;
-    if (!urlUniprot) {
+    if (!urlUniprot || isMobile) {
       if (zoomedIndex !== null) {
         setZoomedIndex(null);
+      }
+      if (isMobile && (searchParams.get("uniprot") || legacyUniprot)) {
+        const next = new URLSearchParams(searchParams);
+        next.delete("uniprot");
+        next.delete("zoomUniprot");
+        setSearchParams(next);
       }
       return;
     }
@@ -289,7 +297,7 @@ const MolstarMulti: React.FC<MolstarViewerProps> = memo(function MolstarMulti({
     if (zoomedIndex !== nextIndex) {
       setZoomedIndex(nextIndex);
     }
-  }, [proteins, searchParams, setSearchParams, zoomedIndex]);
+  }, [proteins, searchParams, setSearchParams, zoomedIndex, isMobile]);
 
   useEffect(() => {
     if (zoomedIndex === null) {
@@ -483,7 +491,7 @@ const MolstarMulti: React.FC<MolstarViewerProps> = memo(function MolstarMulti({
           >
             <button
               type="button"
-              className="absolute right-2 top-2 z-30 rounded-full bg-white/90 p-1 shadow hover:bg-white"
+              className="absolute right-2 top-2 z-30 rounded-full bg-white/90 p-1 shadow hover:bg-white hidden md:inline-flex"
               onClick={(event) => {
                 event.stopPropagation();
                 const next = new URLSearchParams(searchParams);
@@ -555,7 +563,7 @@ const MolstarMulti: React.FC<MolstarViewerProps> = memo(function MolstarMulti({
       </div>
 
       <Dialog.Root
-        open={zoomedIndex !== null}
+        open={!isMobile && zoomedIndex !== null}
         onOpenChange={(open) => {
           if (!open) {
             const next = new URLSearchParams(searchParams);
