@@ -17,7 +17,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import Markdown from "@/components/Markdown";
-import { Info, HelpCircle, Sparkles } from "lucide-react";
+import { Info, HelpCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 import SuggestFeatureModal from "./components/SuggestFeatureModal";
