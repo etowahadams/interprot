@@ -238,7 +238,7 @@ export default function SuggestFeatureModal({
                   id="contributorName"
                   value={contributorName}
                   onChange={(e) => setContributorName(e.target.value)}
-                  placeholder="Leave blank for anonymous submission"
+                  placeholder="How you'd like to be credited"
                 />
               </div>
 
@@ -249,7 +249,7 @@ export default function SuggestFeatureModal({
                   type="url"
                   value={contributorLink}
                   onChange={(e) => setContributorLink(e.target.value)}
-                  placeholder="https://twitter.com/yourhandle"
+                  placeholder="Link to your profile (e.g., Twitter, LinkedIn)"
                 />
               </div>
 
