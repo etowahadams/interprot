@@ -17,8 +17,10 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import Markdown from "@/components/Markdown";
-import { Info, HelpCircle } from "lucide-react";
+import { Info, HelpCircle, Sparkles } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
+import SuggestFeatureModal from "./components/SuggestFeatureModal";
 
 const actRanges: [number, number][] = [
   [0.75, 1],
@@ -82,6 +84,7 @@ const SAEVisualizerPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isDeadLatent, setIsDeadLatent] = useState(false);
   const [hoveredProteinId, setHoveredProteinId] = useState<string | null>(null);
+  const [suggestModalOpen, setSuggestModalOpen] = useState(false);
 
   const handleProteinHover = useCallback((alphafoldId: string | null) => {
     setHoveredProteinId(alphafoldId);
@@ -125,23 +128,28 @@ const SAEVisualizerPage: React.FC = () => {
       <main className="text-left max-w-7xl mx-auto overflow-x-auto w-full">
         <div className="flex justify-between items-center mt-3 mb-3">
           <h1 className="text-3xl font-semibold md:mt-0 mt-16">Feature {feature}</h1>
-          {featureStats && (
-            <div className="flex items-center gap-2">
-              <span>Activation frequency: {(featureStats.freq_active * 100).toFixed(2)}% </span>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <HelpCircle className="h-4 w-4 text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-[300px]">
-                    We precomputed SAE activations on 75,000 sequences from SwissProt clustered at
-                    30% sequence identity. The feature activated on this percentage of those
-                    sequences.
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          )}
+          <div className="flex items-center gap-4">
+            {featureStats && (
+              <div className="flex items-center gap-2">
+                <span>Activation frequency: {(featureStats.freq_active * 100).toFixed(2)}% </span>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[300px]">
+                      We precomputed SAE activations on 75,000 sequences from SwissProt clustered at
+                      30% sequence identity. The feature activated on this percentage of those
+                      sequences.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            )}
+            <Button variant="outline" size="sm" onClick={() => setSuggestModalOpen(true)}>
+              Suggest as Curated
+            </Button>
+          </div>
         </div>
         <div>
           {featureStats && featureStats.top_pfam && featureStats.top_pfam.length > 0 && (
@@ -235,6 +243,12 @@ const SAEVisualizerPage: React.FC = () => {
           </div>
         )}
       </main>
+      <SuggestFeatureModal
+        open={suggestModalOpen}
+        onOpenChange={setSuggestModalOpen}
+        featureDim={feature ?? 0}
+        modelName={model}
+      />
     </>
   );
 };

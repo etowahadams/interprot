@@ -1,0 +1,7 @@
+name = "interprot-suggest-feature"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[vars]
+GITHUB_OWNER = "etowahadams"
+GITHUB_REPO = "interprot"

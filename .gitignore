@@ -32,3 +32,4 @@ __pycache__/
 # Directories with large files
 checkpoints/
 data/
+!viz/src/data/
