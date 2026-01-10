@@ -602,7 +602,7 @@ const MolstarMulti: React.FC<MolstarViewerProps> = memo(function MolstarMulti({
 
                 <div
                   ref={zoomViewerContainerRef}
-                  className="relative flex-1 min-h-[320px] rounded-lg border bg-gray-50"
+                  className="relative flex-1 min-h-[320px] rounded-lg border bg-gray-50 cursor-pointer"
                 >
                   {zoomHoverLabel && (
                     <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-sm pointer-events-none z-20">
