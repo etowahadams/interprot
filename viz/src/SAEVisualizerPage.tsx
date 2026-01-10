@@ -146,14 +146,16 @@ const SAEVisualizerPage: React.FC = () => {
                 </TooltipProvider>
               </div>
             )}
-            <Button
-              className="w-full sm:w-auto"
-              variant="outline"
-              size="sm"
-              onClick={() => setSuggestModalOpen(true)}
-            >
-              Suggest as Curated
-            </Button>
+            {!dimToCuratedMap.has(feature) && (
+              <Button
+                className="w-full sm:w-auto"
+                variant="outline"
+                size="sm"
+                onClick={() => setSuggestModalOpen(true)}
+              >
+                I recognize this feature
+              </Button>
+            )}
           </div>
         </div>
         <div>

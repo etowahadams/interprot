@@ -139,8 +139,7 @@ export default function SuggestFeatureModal({
         <DialogHeader>
           <DialogTitle>Suggest as Curated Feature</DialogTitle>
           <DialogDescription>
-            Suggest feature {featureDim} from {modelName} to be added to the curated list. This will
-            create a pull request for review.
+            Suggest feature {featureDim} to be added to the curated list.
           </DialogDescription>
         </DialogHeader>
 
@@ -200,7 +199,6 @@ export default function SuggestFeatureModal({
                   className="min-h-[100px]"
                   maxLength={2000}
                 />
-                <p className="text-xs text-muted-foreground">Markdown supported</p>
               </div>
 
               <div className="grid gap-2">
