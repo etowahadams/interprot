@@ -115,29 +115,40 @@ export default function CustomSeqSearchPage() {
   };
 
   const filteredResults = useMemo(() => {
+    // Use default max % filter if not explicitly set in URL
+    const effectiveMaxPctAct = urlState.maxPctAct ?? DEFAULT_MAX_PERCENT_ACTIVATION;
+
     return searchResults.filter((result) => {
       // Filter out amino acid identity features (default on, hideAA !== "0")
       if (urlState.hideAA !== "0" && aminoAcidIdentityDims.has(result.dim)) {
         return false;
       }
 
-      if (!urlState.start && !urlState.end && !urlState.minPctAct && !urlState.maxPctAct)
-        return true;
-      const hasActivationInRange = result.sae_acts.some((act, pos) => {
-        const afterStart = !urlState.start || pos >= urlState.start;
-        const beforeEnd = !urlState.end || pos <= urlState.end;
-        return act > 0 && afterStart && beforeEnd;
-      });
-
-      if (urlState.minPctAct || urlState.maxPctAct) {
-        const activatedCount = result.sae_acts.filter((act) => act > 0).length;
-        const percentActivated = (activatedCount / result.sae_acts.length) * 100;
-        const aboveMin = !urlState.minPctAct || percentActivated >= urlState.minPctAct;
-        const belowMax = !urlState.maxPctAct || percentActivated <= urlState.maxPctAct;
-        return hasActivationInRange && aboveMin && belowMax;
+      // Apply max % activated filter (default 20%)
+      const activatedCount = result.sae_acts.filter((act) => act > 0).length;
+      const percentActivated = (activatedCount / result.sae_acts.length) * 100;
+      if (percentActivated > effectiveMaxPctAct) {
+        return false;
       }
 
-      return hasActivationInRange;
+      // Apply min % activated filter if set
+      if (urlState.minPctAct && percentActivated < urlState.minPctAct) {
+        return false;
+      }
+
+      // Apply position range filter if set
+      if (urlState.start || urlState.end) {
+        const hasActivationInRange = result.sae_acts.some((act, pos) => {
+          const afterStart = !urlState.start || pos >= urlState.start;
+          const beforeEnd = !urlState.end || pos <= urlState.end;
+          return act > 0 && afterStart && beforeEnd;
+        });
+        if (!hasActivationInRange) {
+          return false;
+        }
+      }
+
+      return true;
     });
   }, [
     searchResults,
@@ -258,6 +269,7 @@ export default function CustomSeqSearchPage() {
     if (urlState.chain && chains.length > 0) {
       const chain = chains.find((c) => c.id === urlState.chain);
       if (chain) {
+        setIsLoading(true);
         setSearchResults([]);
         submittedSeqRef.current = chain.sequence;
         getSAEAllDimsActivations({
@@ -265,6 +277,7 @@ export default function CustomSeqSearchPage() {
           sae_name: model,
         }).then((results) => {
           setSearchResults(results);
+          setIsLoading(false);
         });
       }
     }
@@ -317,31 +330,30 @@ export default function CustomSeqSearchPage() {
               }
             }}
             loading={isLoading}
-            buttonText="Search"
             exampleSeqs={!hasSubmittedInput ? SAE_CONFIGS[model].searchExamples : undefined}
+            bottomLeftSlot={
+              !isLoading && urlState.pdb && chains.length > 0 ? (
+                <Select
+                  value={urlState.chain}
+                  onValueChange={(value) => setUrlState({ chain: value })}
+                >
+                  <SelectTrigger className="h-8 w-auto gap-2 border-none bg-muted/50 hover:bg-muted text-sm">
+                    <SelectValue placeholder="Chain" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {chains.map((chain) => (
+                      <SelectItem key={chain.id} value={chain.id}>
+                        Chain {chain.id}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : undefined
+            }
           />
         </div>
 
         <div className="flex flex-col gap-2 mt-4 text-left">
-          {!isLoading && urlState.pdb && (
-            <div className="flex items-center gap-2 mb-4">
-              <Select
-                value={urlState.chain}
-                onValueChange={(value) => setUrlState({ chain: value })}
-              >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Select chain" />
-                </SelectTrigger>
-                <SelectContent>
-                  {chains.map((chain) => (
-                    <SelectItem key={chain.id} value={chain.id}>
-                      Chain {chain.id}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
           {isLoading && hasSubmittedInput && (
             <div className="flex flex-col gap-4 mt-4">
               {[...Array(3)].map((_, i) => (
@@ -452,10 +464,10 @@ export default function CustomSeqSearchPage() {
                               <Input
                                 type="number"
                                 className="w-24 text-sm"
-                                placeholder="max %"
+                                placeholder={`${DEFAULT_MAX_PERCENT_ACTIVATION}`}
                                 min={0}
                                 max={100}
-                                value={maxPctAct || ""}
+                                value={maxPctAct ?? DEFAULT_MAX_PERCENT_ACTIVATION}
                                 onChange={(e) => {
                                   const val = e.target.value ? parseInt(e.target.value) : undefined;
                                   setMaxPctAct(val);

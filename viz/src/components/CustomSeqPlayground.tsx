@@ -130,7 +130,6 @@ const CustomSeqPlayground = () => {
             }
           }}
           loading={playgroundState === PlaygroundState.LOADING_SAE_ACTIVATIONS}
-          buttonText="Submit"
           onClear={() => {
             setCustomSeqInput("");
             setInputProteinActivations(initialState.inputProteinActivations);
