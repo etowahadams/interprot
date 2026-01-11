@@ -2,7 +2,7 @@ import { useState, useEffect, ReactNode } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { isProteinSequence, isPDBID, AminoAcidSequence, PDBID, getPDBChainsData } from "@/utils";
-import { ArrowUp, Loader2 } from "lucide-react";
+import { ArrowUp, Loader2, X } from "lucide-react";
 
 export type ValidSeqInput = AminoAcidSequence | PDBID;
 
@@ -14,6 +14,7 @@ export default function SeqInput({
   exampleSeqs,
   onClear,
   bottomLeftSlot,
+  submittedInput,
 }: {
   input: string;
   setInput: (input: string) => void;
@@ -22,6 +23,7 @@ export default function SeqInput({
   exampleSeqs?: { [key: string]: AminoAcidSequence | PDBID };
   onClear?: () => void;
   bottomLeftSlot?: ReactNode;
+  submittedInput?: string;
 }) {
   const [error, setError] = useState<string | null>(null);
 
@@ -65,12 +67,26 @@ export default function SeqInput({
             }
           }}
         />
-        {bottomLeftSlot && <div className="absolute bottom-3 left-3">{bottomLeftSlot}</div>}
+        <div className="absolute bottom-3 left-3 flex items-center gap-2">
+          {bottomLeftSlot}
+          {onClear && input && (
+            <Button
+              onClick={onClear}
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-muted-foreground hover:text-foreground"
+              disabled={loading}
+            >
+              <X className="h-4 w-4 mr-1" />
+              Clear
+            </Button>
+          )}
+        </div>
         <Button
           onClick={handleSubmit}
           size="icon"
           className="absolute bottom-3 right-3 h-8 w-8 rounded-lg"
-          disabled={loading || !input || !!error}
+          disabled={loading || !input || !!error || input === submittedInput}
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
         </Button>
@@ -83,18 +99,6 @@ export default function SeqInput({
               {name}
             </Button>
           ))}
-        </div>
-      )}
-      {onClear && (
-        <div className="flex justify-end">
-          <Button
-            variant="outline"
-            onClick={onClear}
-            className="w-full sm:w-32"
-            disabled={loading || !input}
-          >
-            Clear
-          </Button>
         </div>
       )}
     </div>

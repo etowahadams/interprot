@@ -353,6 +353,7 @@ export default function CustomSeqSearchPage() {
             }}
             loading={isLoading}
             exampleSeqs={!hasSubmittedInput ? SAE_CONFIGS[model].searchExamples : undefined}
+            submittedInput={urlState.pdb || urlState.seq}
             bottomLeftSlot={
               !isLoading && urlState.pdb && chains.length > 0 ? (
                 <Select
