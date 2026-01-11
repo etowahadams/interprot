@@ -78,6 +78,17 @@ export default function CustomSeqSearchPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [chains, setChains] = useState<PDBChainsData[]>([]);
 
+  // Sync local filter state from URL when dropdown opens
+  const handleFilterOpenChange = (open: boolean) => {
+    if (open) {
+      setStartPos(urlState.start);
+      setEndPos(urlState.end);
+      setMinPctAct(urlState.minPctAct);
+      setMaxPctAct(urlState.maxPctAct);
+    }
+    setIsFilterOpen(open);
+  };
+
   const aminoAcidIdentityDims = useMemo(() => {
     const curated = SAE_CONFIGS[model]?.curated || [];
     return new Set(
@@ -108,32 +119,35 @@ export default function CustomSeqSearchPage() {
       end: undefined,
       minPctAct: undefined,
       maxPctAct: undefined,
-      hideAA: undefined, // undefined means filter is ON (default)
+      hideAA: undefined,
     });
     setCurrentPage(1);
     setIsFilterOpen(false);
   };
 
   const filteredResults = useMemo(() => {
-    // Use default max % filter if not explicitly set in URL
-    const effectiveMaxPctAct = urlState.maxPctAct ?? DEFAULT_MAX_PERCENT_ACTIVATION;
-
     return searchResults.filter((result) => {
-      // Filter out amino acid identity features (default on, hideAA !== "0")
-      if (urlState.hideAA !== "0" && aminoAcidIdentityDims.has(result.dim)) {
+      // Filter out amino acid identity features when hideAA=1
+      if (urlState.hideAA === "1" && aminoAcidIdentityDims.has(result.dim)) {
         return false;
       }
 
-      // Apply max % activated filter (default 20%)
-      const activatedCount = result.sae_acts.filter((act) => act > 0).length;
-      const percentActivated = (activatedCount / result.sae_acts.length) * 100;
-      if (percentActivated > effectiveMaxPctAct) {
-        return false;
+      // Apply max % activated filter only when explicitly set
+      if (urlState.maxPctAct !== undefined) {
+        const activatedCount = result.sae_acts.filter((act) => act > 0).length;
+        const percentActivated = (activatedCount / result.sae_acts.length) * 100;
+        if (percentActivated > urlState.maxPctAct) {
+          return false;
+        }
       }
 
       // Apply min % activated filter if set
-      if (urlState.minPctAct && percentActivated < urlState.minPctAct) {
-        return false;
+      if (urlState.minPctAct) {
+        const activatedCount = result.sae_acts.filter((act) => act > 0).length;
+        const percentActivated = (activatedCount / result.sae_acts.length) * 100;
+        if (percentActivated < urlState.minPctAct) {
+          return false;
+        }
       }
 
       // Apply position range filter if set
@@ -292,14 +306,22 @@ export default function CustomSeqSearchPage() {
 
     if (!isInitialLoad) return;
 
-    if (!urlState.maxPctAct) {
-      setUrlState({ maxPctAct: DEFAULT_MAX_PERCENT_ACTIVATION });
+    // Combine into single setUrlState call to avoid overwriting
+    const updates: Partial<UrlState> = {};
+    if (urlState.maxPctAct === undefined) {
+      updates.maxPctAct = DEFAULT_MAX_PERCENT_ACTIVATION;
       setMaxPctAct(DEFAULT_MAX_PERCENT_ACTIVATION);
     }
-    if (!urlState.sortBy) {
-      setUrlState({ sortBy: DEFAULT_SORT_BY });
+    if (urlState.hideAA === undefined) {
+      updates.hideAA = "1";
     }
-  }, [searchResults.length, urlState.maxPctAct, urlState.sortBy, setUrlState]);
+    if (!urlState.sortBy) {
+      updates.sortBy = DEFAULT_SORT_BY;
+    }
+    if (Object.keys(updates).length > 0) {
+      setUrlState(updates);
+    }
+  }, [searchResults.length, urlState.maxPctAct, urlState.hideAA, urlState.sortBy, setUrlState]);
 
   // Sort results whenever the sortBy or start/end position changes
   useEffect(() => {
@@ -378,7 +400,7 @@ export default function CustomSeqSearchPage() {
                   </div>
 
                   <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 order-1 sm:order-2 sm:ml-auto w-full sm:w-auto">
-                    <DropdownMenu open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                    <DropdownMenu open={isFilterOpen} onOpenChange={handleFilterOpenChange}>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" size="sm" className="flex items-center gap-2">
                           <Filter className="h-4 w-4" />
@@ -386,8 +408,8 @@ export default function CustomSeqSearchPage() {
                           {(urlState.start ||
                             urlState.end ||
                             urlState.minPctAct ||
-                            urlState.maxPctAct ||
-                            urlState.hideAA === "0") && (
+                            urlState.maxPctAct !== undefined ||
+                            urlState.hideAA === "1") && (
                             <span className="ml-1 h-2 w-2 rounded-full bg-primary"></span>
                           )}
                         </Button>
@@ -396,12 +418,13 @@ export default function CustomSeqSearchPage() {
                         <DropdownMenuLabel>Filter Results</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuCheckboxItem
-                          checked={urlState.hideAA !== "0"}
+                          checked={urlState.hideAA === "1"}
                           onCheckedChange={(checked) => {
-                            setUrlState({ hideAA: checked ? undefined : "0" });
+                            setUrlState({ hideAA: checked ? "1" : undefined });
                             setCurrentPage(1);
                           }}
                           onSelect={(e) => e.preventDefault()}
+                          className="cursor-pointer"
                         >
                           Hide amino acid identity features
                         </DropdownMenuCheckboxItem>
@@ -464,10 +487,10 @@ export default function CustomSeqSearchPage() {
                               <Input
                                 type="number"
                                 className="w-24 text-sm"
-                                placeholder={`${DEFAULT_MAX_PERCENT_ACTIVATION}`}
+                                placeholder="max %"
                                 min={0}
                                 max={100}
-                                value={maxPctAct ?? DEFAULT_MAX_PERCENT_ACTIVATION}
+                                value={maxPctAct ?? ""}
                                 onChange={(e) => {
                                   const val = e.target.value ? parseInt(e.target.value) : undefined;
                                   setMaxPctAct(val);
