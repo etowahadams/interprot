@@ -3,7 +3,6 @@ import SAEFeatureCard from "./SAEFeatureCard";
 import {
   Pagination,
   PaginationContent,
-  PaginationEllipsis,
   PaginationItem,
   PaginationNext,
   PaginationPrevious,
@@ -37,9 +36,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Filter } from "lucide-react";
 
-const RESULTS_PER_PAGE = 20;
+const RESULTS_PER_PAGE = 10;
 const DEFAULT_MAX_PERCENT_ACTIVATION = 20;
 const DEFAULT_SORT_BY = "max";
 
@@ -98,7 +98,6 @@ export default function CustomSeqSearchPage() {
     setIsFilterOpen(false);
   };
 
-  // FIXME: there's a bug where this doesn't clear maxPctAct
   const clearFilters = () => {
     setStartPos(undefined);
     setEndPos(undefined);
@@ -155,8 +154,6 @@ export default function CustomSeqSearchPage() {
     (currentPage - 1) * RESULTS_PER_PAGE,
     currentPage * RESULTS_PER_PAGE
   );
-  const startIndex = (currentPage - 1) * RESULTS_PER_PAGE + 1;
-  const endIndex = Math.min(currentPage * RESULTS_PER_PAGE, filteredResults.length);
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
@@ -273,9 +270,15 @@ export default function CustomSeqSearchPage() {
     }
   }, [urlState.chain, chains, model]);
 
-  // Set default filter and sort once results are loaded
+  // Set default filter and sort once results are loaded (only on initial load)
+  const prevResultsLength = useRef(0);
   useEffect(() => {
-    if (!searchResults.length) return;
+    // Only initialize defaults when results first load (length goes from 0 to > 0)
+    const isInitialLoad = prevResultsLength.current === 0 && searchResults.length > 0;
+    prevResultsLength.current = searchResults.length;
+
+    if (!isInitialLoad) return;
+
     if (!urlState.maxPctAct) {
       setUrlState({ maxPctAct: DEFAULT_MAX_PERCENT_ACTIVATION });
       setMaxPctAct(DEFAULT_MAX_PERCENT_ACTIVATION);
@@ -339,12 +342,27 @@ export default function CustomSeqSearchPage() {
               </Select>
             </div>
           )}
+          {isLoading && hasSubmittedInput && (
+            <div className="flex flex-col gap-4 mt-4">
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-32 w-full rounded-lg" />
+              ))}
+            </div>
+          )}
           {searchResults.length > 0 && (
             <>
               <div className="sm:flex sm:flex-row sm:justify-between sm:items-center px-2">
                 <div className="flex flex-col sm:flex-row gap-4 w-full items-start sm:items-center">
-                  <div className="order-2 sm:order-1 text-sm">
-                    {startIndex} - {endIndex} of {filteredResults.length} activating features
+                  <div className="order-2 sm:order-1">
+                    <div className="text-sm">
+                      <span className="font-medium">{filteredResults.length}</span> features
+                      {filteredResults.length !== searchResults.length && (
+                        <span className="text-muted-foreground">
+                          {" "}
+                          (filtered from {searchResults.length} activating features)
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 order-1 sm:order-2 sm:ml-auto w-full sm:w-auto">
@@ -509,46 +527,57 @@ export default function CustomSeqSearchPage() {
                   ))}
                   <Pagination>
                     <PaginationContent>
-                      {currentPage > 1 && (
-                        <>
-                          <PaginationItem>
-                            <PaginationPrevious
-                              className="cursor-pointer"
-                              onClick={() => {
-                                handlePageChange(currentPage - 1);
-                                window.scrollTo({ top: 0, behavior: "smooth" });
-                              }}
-                              isActive={currentPage > 1}
-                            />
-                          </PaginationItem>
-                          <PaginationItem>
-                            <PaginationEllipsis />
-                          </PaginationItem>
-                        </>
-                      )}
-                      <PaginationItem>{currentPage}</PaginationItem>
-                      {currentPage < totalPages && (
-                        <>
-                          <PaginationItem>
-                            <PaginationEllipsis />
-                          </PaginationItem>
-                          <PaginationItem>
-                            <PaginationNext
-                              className="cursor-pointer"
-                              onClick={() => {
-                                handlePageChange(currentPage + 1);
-                                window.scrollTo({ top: 0, behavior: "smooth" });
-                              }}
-                              isActive={currentPage !== totalPages}
-                            />
-                          </PaginationItem>
-                        </>
-                      )}
+                      <PaginationItem>
+                        <PaginationPrevious
+                          className={
+                            currentPage > 1 ? "cursor-pointer" : "pointer-events-none opacity-50"
+                          }
+                          onClick={() => {
+                            if (currentPage > 1) {
+                              handlePageChange(currentPage - 1);
+                              window.scrollTo({ top: 0, behavior: "smooth" });
+                            }
+                          }}
+                          isActive={currentPage > 1}
+                        />
+                      </PaginationItem>
+                      <PaginationItem>
+                        <span className="px-4 text-sm">
+                          Page {currentPage} of {totalPages}
+                        </span>
+                      </PaginationItem>
+                      <PaginationItem>
+                        <PaginationNext
+                          className={
+                            currentPage < totalPages
+                              ? "cursor-pointer"
+                              : "pointer-events-none opacity-50"
+                          }
+                          onClick={() => {
+                            if (currentPage < totalPages) {
+                              handlePageChange(currentPage + 1);
+                              window.scrollTo({ top: 0, behavior: "smooth" });
+                            }
+                          }}
+                          isActive={currentPage < totalPages}
+                        />
+                      </PaginationItem>
                     </PaginationContent>
                   </Pagination>
                 </div>
               ) : (
-                <div className="text-sm flex justify-center mt-2">No features found.</div>
+                <div className="text-sm text-center mt-4 space-y-2">
+                  {searchResults.length === 0 ? (
+                    <p>No SAE features activated on this sequence.</p>
+                  ) : (
+                    <>
+                      <p>No features match your current filters.</p>
+                      <Button variant="link" onClick={clearFilters} className="text-sm">
+                        Clear all filters
+                      </Button>
+                    </>
+                  )}
+                </div>
               )}
             </>
           )}
