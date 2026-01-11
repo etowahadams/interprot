@@ -504,6 +504,7 @@ export default function CustomSeqSearchPage() {
                       }}
                       highlightStart={urlState.start}
                       highlightEnd={urlState.end}
+                      seqContext={{ pdb: urlState.pdb, seq: urlState.seq }}
                     />
                   ))}
                   <Pagination>
