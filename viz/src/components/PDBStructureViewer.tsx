@@ -77,15 +77,15 @@ const PDBStructureViewer = ({
         const { chains, residues, residueAtomSegments, chainAtomSegments } = model.atomicHierarchy;
 
         // Map each atom to its residue's sequence position and chain.
-        // We use auth_seq_id (PDB residue number) to index into the activation array,
-        // since the activations are indexed by canonical sequence position (1-based in PDB).
+        // Prefer label_seq_id (canonical sequence position) and fall back to auth_seq_id.
         for (let i = 0, _i = model.atomicHierarchy.atoms._rowCount; i < _i; i++) {
           const residueIdx = residueAtomSegments.index[i];
           const chainIdx = chainAtomSegments.index[i];
           const chainId = chains.auth_asym_id.value(chainIdx);
-          // Use the PDB residue number (auth_seq_id) to get the sequence position.
-          // Subtract 1 to convert from 1-based PDB numbering to 0-based array indexing.
-          const seqId = residues.auth_seq_id.value(residueIdx);
+          const labelSeqId = residues.label_seq_id.value(residueIdx);
+          const authSeqId = residues.auth_seq_id.value(residueIdx);
+          const seqId = labelSeqId || authSeqId;
+          if (!seqId) continue;
           const sequenceIndex = seqId - 1;
 
           map.set(i as ElementIndex, {
@@ -149,7 +149,10 @@ const PDBStructureViewer = ({
       const atomOffset = residueAtomSegments.offsets[rI];
       const chainIdx = chainAtomSegments.index[atomOffset];
       const chainId = chains.auth_asym_id.value(chainIdx);
-      const seqId = residues.auth_seq_id.value(rI);
+      const labelSeqId = residues.label_seq_id.value(rI);
+      const authSeqId = residues.auth_seq_id.value(rI);
+      const seqId = labelSeqId || authSeqId;
+      if (!seqId) continue;
 
       if (!chainMaps.has(chainId)) {
         chainMaps.set(chainId, new Map());
@@ -234,7 +237,7 @@ const PDBStructureViewer = ({
 
   useEffect(() => {
     const getStructure = async (pdbId: PDBID) => {
-      const url = `https://files.rcsb.org/download/${pdbId.toLowerCase()}.pdb`;
+      const url = `https://files.rcsb.org/download/${pdbId.toLowerCase()}.cif`;
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`Failed to fetch PDB structure: ${response.status}`);
@@ -329,7 +332,7 @@ const PDBStructureViewer = ({
         });
         URL.revokeObjectURL(blobUrl);
 
-        const trajectory = await plugin.builders.structure.parseTrajectory(structureData, "pdb");
+        const trajectory = await plugin.builders.structure.parseTrajectory(structureData, "mmcif");
         await plugin.builders.structure.hierarchy.applyPreset(trajectory, "default");
 
         plugin.dataTransaction(async () => {
