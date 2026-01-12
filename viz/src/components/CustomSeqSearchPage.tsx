@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Filter } from "lucide-react";
 
 const RESULTS_PER_PAGE = 10;
@@ -356,21 +357,29 @@ export default function CustomSeqSearchPage() {
             submittedInput={urlState.pdb || urlState.seq}
             bottomLeftSlot={
               !isLoading && urlState.pdb && chains.length > 0 ? (
-                <Select
-                  value={urlState.chain}
-                  onValueChange={(value) => setUrlState({ chain: value })}
-                >
-                  <SelectTrigger className="h-8 w-auto gap-2 border-none bg-muted/50 hover:bg-muted text-sm">
-                    <SelectValue placeholder="Chain" />
-                  </SelectTrigger>
-                  <SelectContent>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-muted-foreground">Chain:</span>
+                  <ToggleGroup
+                    type="single"
+                    size="sm"
+                    variant="outline"
+                    value={urlState.chain ?? ""}
+                    onValueChange={(value) => {
+                      if (value) setUrlState({ chain: value });
+                    }}
+                    className="justify-start"
+                  >
                     {chains.map((chain) => (
-                      <SelectItem key={chain.id} value={chain.id}>
-                        Chain {chain.id}
-                      </SelectItem>
+                      <ToggleGroupItem
+                        key={chain.id}
+                        value={chain.id}
+                        aria-label={`Chain ${chain.id}`}
+                      >
+                        {chain.id}
+                      </ToggleGroupItem>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </ToggleGroup>
+                </div>
               ) : undefined
             }
           />
