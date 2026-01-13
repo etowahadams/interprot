@@ -176,6 +176,7 @@ const PDBStructureViewer = ({
 
   const pluginRef = useRef<PluginContext | null>(null);
   const structureRef = useRef<Structure | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
   // Map: chainId -> (seqPos -> residueIndex) for sequence → structure hover
   const seqPosToResidueRef = useRef<Map<string, Map<number, number>>>(new Map());
   // Map: chainId -> (auth_seq_id -> seqPos) for structure → sequence hover
@@ -262,6 +263,9 @@ const PDBStructureViewer = ({
   const activeResidueIndex = sequenceHoverIndex ?? structureHoverIndex;
 
   useEffect(() => {
+    // Track if effect is still active (component mounted and not re-rendered)
+    let isActive = true;
+
     const getStructure = async (pdbId: PDBID) => {
       const url = `https://files.rcsb.org/download/${pdbId.toLowerCase()}.cif`;
       const response = await fetch(url);
@@ -272,45 +276,41 @@ const PDBStructureViewer = ({
     };
 
     const renderViewer = async (pdbData: string) => {
-      const waitForElement = () => {
-        return new Promise<HTMLElement>((resolve, reject) => {
-          const element = document.getElementById(viewerId);
-          if (element) {
-            resolve(element);
-            return;
-          }
+      // Wait for next frame to ensure container has dimensions
+      await new Promise((resolve) => requestAnimationFrame(resolve));
 
-          const observer = new MutationObserver(() => {
-            const element = document.getElementById(viewerId);
-            if (element) {
-              observer.disconnect();
-              resolve(element);
-            }
-          });
+      if (!isActive) return;
 
-          observer.observe(document.body, {
-            childList: true,
-            subtree: true,
-          });
+      const container = containerRef.current;
+      if (!container) return;
 
-          setTimeout(() => {
-            observer.disconnect();
-            reject(new Error("Structure viewer element not found after timeout"));
-          }, 5000);
-        });
-      };
+      // Clear any existing canvas (from previous render)
+      while (container.firstChild) {
+        container.removeChild(container.firstChild);
+      }
 
-      const container = await waitForElement();
-      container.innerHTML = "";
+      // Get container dimensions and set explicit canvas size for WebGL
+      const rect = container.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
 
       const canvas = document.createElement("canvas");
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+      canvas.style.width = "100%";
+      canvas.style.height = "100%";
       container.appendChild(canvas);
 
       const plugin = new PluginContext(createMolstarSpec());
       pluginRef.current = plugin;
 
       await plugin.init();
-      plugin.initViewer(canvas, container as HTMLDivElement);
+
+      if (!isActive) {
+        plugin.dispose();
+        return;
+      }
+
+      plugin.initViewer(canvas, container);
 
       // Enable residue-level hover labels
       plugin.managers.interactivity.setProps({ granularity: "residue" });
@@ -356,10 +356,13 @@ const PDBStructureViewer = ({
         });
         URL.revokeObjectURL(blobUrl);
 
+        // Check if still active after data download
+        if (!isActive) return;
+
         const trajectory = await plugin.builders.structure.parseTrajectory(structureData, "mmcif");
         await plugin.builders.structure.hierarchy.applyPreset(trajectory, "default");
 
-        plugin.dataTransaction(async () => {
+        await plugin.dataTransaction(async () => {
           for (const s of plugin.managers.structure.hierarchy.current.structures) {
             await plugin.managers.structure.component.updateRepresentationsTheme(s.components, {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -367,6 +370,8 @@ const PDBStructureViewer = ({
             });
           }
         });
+
+        if (!isActive) return;
 
         // Build residue mapping indices
         const loadedStructure =
@@ -389,7 +394,9 @@ const PDBStructureViewer = ({
         }
       } catch (error) {
         console.error("Error loading structure:", error);
-        setError("An error occurred while loading the structure.");
+        if (isActive) {
+          setError("An error occurred while loading the structure.");
+        }
       }
     };
 
@@ -400,11 +407,17 @@ const PDBStructureViewer = ({
         const pdbData =
           StructureCache[proteinActivationsData.pdbId] ||
           (await getStructure(proteinActivationsData.pdbId));
+
+        // Check if still active after fetching structure
+        if (!isActive) return;
+
         StructureCache[proteinActivationsData.pdbId] = pdbData;
-        renderViewer(pdbData);
+        await renderViewer(pdbData);
       } catch (error) {
         console.error("Error loading structure:", error);
-        setError("An error occurred while loading the structure from PDB.");
+        if (isActive) {
+          setError("An error occurred while loading the structure from PDB.");
+        }
       }
     };
 
@@ -418,6 +431,8 @@ const PDBStructureViewer = ({
     });
 
     return () => {
+      // Mark as inactive to prevent any pending async operations from continuing
+      isActive = false;
       if (pluginRef.current) {
         pluginRef.current.dispose();
         pluginRef.current = null;
@@ -451,16 +466,9 @@ const PDBStructureViewer = ({
     plugin.managers.interactivity.lociHighlights.highlightOnly({ loci });
   }, [sequenceHoverIndex, selectedChainId]);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <img src={proteinEmoji} alt="Loading..." className="w-12 h-12 animate-wiggle mb-4" />
-      </div>
-    );
-  }
   return (
     <div className="relative flex flex-col gap-4">
-      {/* 3D Structure Viewer */}
+      {/* 3D Structure Viewer - always render the container so Molstar can initialize */}
       {!error && (
         <div
           id={viewerId}
@@ -470,6 +478,14 @@ const PDBStructureViewer = ({
             height: error ? 0 : isMobile ? 300 : 400,
           }}
         >
+          {/* Inner container for Molstar canvas - managed outside React's reconciliation */}
+          <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+          {/* Loading overlay */}
+          {isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10">
+              <img src={proteinEmoji} alt="Loading..." className="w-12 h-12 animate-wiggle" />
+            </div>
+          )}
           {hoverLabel && (
             <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-sm pointer-events-none z-20">
               {hoverLabel}
