@@ -29,6 +29,133 @@ interface PDBStructureViewerProps {
   onLoad?: () => void;
 }
 
+/**
+ * Creates a Molstar color theme that colors residues by their activation values.
+ *
+ * Uses label_seq_id - 1 to map structure residues to the canonical sequence position.
+ * This is correct because:
+ * - The canonical sequence from RCSB (pdbx_seq_one_letter_code_can) includes ALL residues
+ * - label_seq_id in the structure corresponds to the 1-based position in this canonical sequence
+ * - Disordered residues are missing from the structure but present in the sequence
+ */
+function createResidueColorTheme(
+  chainActivations: { [chainId: string]: number[] },
+  name = "residue-colors"
+) {
+  const maxValue = Math.max(...Object.values(chainActivations).flatMap((v) => v), 0);
+
+  const defaultChainColors = [
+    Color(0xdce6f1), // faint blue
+    Color(0xfce8d5), // faint orange
+    Color(0xe5f0e5), // faint green
+    Color(0xebe5f0), // faint purple
+    Color(0xeae5e3), // faint brown
+    Color(0xf9ebf5), // faint pink
+    Color(0xebebeb), // faint gray
+  ];
+
+  return CustomElementProperty.create({
+    label: "Residue Colors",
+    name,
+    getData(model: Model) {
+      const map = new Map<ElementIndex, { seqPos: number; chainId: string }>();
+      const { chains, residues, residueAtomSegments, chainAtomSegments } = model.atomicHierarchy;
+
+      for (let i = 0, _i = model.atomicHierarchy.atoms._rowCount; i < _i; i++) {
+        const residueIdx = residueAtomSegments.index[i];
+        const chainIdx = chainAtomSegments.index[i];
+        const chainId = chains.auth_asym_id.value(chainIdx);
+
+        // Use label_seq_id to get the position in the canonical sequence
+        // label_seq_id is 1-based, so subtract 1 for 0-based array index
+        const labelSeqId = residues.label_seq_id.value(residueIdx);
+        if (!labelSeqId) continue;
+
+        const seqPos = labelSeqId - 1;
+        map.set(i as ElementIndex, { seqPos, chainId });
+      }
+      return { value: map };
+    },
+    coloring: {
+      getColor(p: { seqPos: number; chainId: string }) {
+        const { seqPos, chainId } = p;
+        const activations = chainActivations[chainId];
+
+        if (!activations || seqPos < 0 || seqPos >= activations.length || !activations[seqPos]) {
+          // Use faint chain color for residues without activations
+          const chainIds = Object.keys(chainActivations);
+          const chainIndex = chainIds.indexOf(chainId);
+          return defaultChainColors[chainIndex % defaultChainColors.length];
+        }
+
+        const color =
+          maxValue > 0 ? redColorMapRGB(activations[seqPos], maxValue) : [255, 255, 255];
+        return Color.fromRgb(color[0], color[1], color[2]);
+      },
+      defaultColor: Color(0xffffff),
+    },
+    getLabel() {
+      return "Activation colors";
+    },
+  });
+}
+
+/**
+ * Builds a map from (chainId, seqPos) -> residueIndex for sequence → structure hover.
+ * seqPos is 0-indexed (label_seq_id - 1).
+ */
+function buildSeqPosToResidueMap(model: Model): Map<string, Map<number, number>> {
+  const chainMaps = new Map<string, Map<number, number>>();
+  const { chains, residues, residueAtomSegments, chainAtomSegments } = model.atomicHierarchy;
+
+  for (let rI = 0, _rI = residues._rowCount; rI < _rI; rI++) {
+    const atomOffset = residueAtomSegments.offsets[rI];
+    const chainIdx = chainAtomSegments.index[atomOffset];
+    const chainId = chains.auth_asym_id.value(chainIdx);
+
+    const labelSeqId = residues.label_seq_id.value(rI);
+    if (!labelSeqId) continue;
+
+    const seqPos = labelSeqId - 1;
+
+    if (!chainMaps.has(chainId)) {
+      chainMaps.set(chainId, new Map());
+    }
+    chainMaps.get(chainId)!.set(seqPos, rI);
+  }
+
+  return chainMaps;
+}
+
+/**
+ * Builds a map from (chainId, auth_seq_id) -> seqPos for structure → sequence hover.
+ * When Molstar displays a hover label like "GLN 22", the 22 is auth_seq_id.
+ * We map this to the 0-indexed sequence position.
+ */
+function buildAuthSeqIdToSeqPosMap(model: Model): Map<string, Map<number, number>> {
+  const chainMaps = new Map<string, Map<number, number>>();
+  const { chains, residues, residueAtomSegments, chainAtomSegments } = model.atomicHierarchy;
+
+  for (let rI = 0, _rI = residues._rowCount; rI < _rI; rI++) {
+    const atomOffset = residueAtomSegments.offsets[rI];
+    const chainIdx = chainAtomSegments.index[atomOffset];
+    const chainId = chains.auth_asym_id.value(chainIdx);
+
+    const authSeqId = residues.auth_seq_id.value(rI);
+    const labelSeqId = residues.label_seq_id.value(rI);
+    if (!authSeqId || !labelSeqId) continue;
+
+    const seqPos = labelSeqId - 1;
+
+    if (!chainMaps.has(chainId)) {
+      chainMaps.set(chainId, new Map());
+    }
+    chainMaps.get(chainId)!.set(authSeqId, seqPos);
+  }
+
+  return chainMaps;
+}
+
 const PDBStructureViewer = ({
   viewerId,
   proteinActivationsData,
@@ -48,124 +175,37 @@ const PDBStructureViewer = ({
 
   const pluginRef = useRef<PluginContext | null>(null);
   const structureRef = useRef<Structure | null>(null);
-  const residueIndexBySeqIdRef = useRef<Map<string, Map<number, number>>>(new Map());
-  const residueLociCacheRef = useRef<Map<string, Map<number, StructureElement.Loci>>>(new Map());
+  // Map: chainId -> (seqPos -> residueIndex) for sequence → structure hover
+  const seqPosToResidueRef = useRef<Map<string, Map<number, number>>>(new Map());
+  // Map: chainId -> (auth_seq_id -> seqPos) for structure → sequence hover
+  const authSeqIdToSeqPosRef = useRef<Map<string, Map<number, number>>>(new Map());
 
-  const createResidueColorTheme = (
-    chainActivations: { [key: string]: number[] },
-    name = "residue-colors"
-  ) => {
-    const maxValue = Math.max(...Object.values(chainActivations).flatMap((values) => values));
+  // Track which sequence positions have corresponding structure residues
+  const [structurePositions, setStructurePositions] = useState<Map<string, Set<number>>>(new Map());
 
-    // Define chain colors with very faint versions
-    const chainColors = new Map<string, Color>();
-    const defaultChainColors = [
-      Color(0xdce6f1), // faint blue
-      Color(0xfce8d5), // faint orange
-      Color(0xe5f0e5), // faint green
-      Color(0xebe5f0), // faint purple
-      Color(0xeae5e3), // faint brown
-      Color(0xf9ebf5), // faint pink
-      Color(0xebebeb), // faint gray
-    ];
-
-    return CustomElementProperty.create({
-      label: "Residue Colors",
-      name,
-      getData(model: Model) {
-        const map = new Map<ElementIndex, { residueIdx: number; chainId: string }>();
-        const { chains, residues, residueAtomSegments, chainAtomSegments } = model.atomicHierarchy;
-
-        // Map each atom to its residue's sequence position and chain.
-        // Prefer label_seq_id (canonical sequence position) and fall back to auth_seq_id.
-        for (let i = 0, _i = model.atomicHierarchy.atoms._rowCount; i < _i; i++) {
-          const residueIdx = residueAtomSegments.index[i];
-          const chainIdx = chainAtomSegments.index[i];
-          const chainId = chains.auth_asym_id.value(chainIdx);
-          const labelSeqId = residues.label_seq_id.value(residueIdx);
-          const authSeqId = residues.auth_seq_id.value(residueIdx);
-          const seqId = labelSeqId || authSeqId;
-          if (!seqId) continue;
-          const sequenceIndex = seqId - 1;
-
-          map.set(i as ElementIndex, {
-            residueIdx: sequenceIndex,
-            chainId,
-          });
-        }
-        return { value: map };
-      },
-      coloring: {
-        getColor(p: { residueIdx: number; chainId: string }) {
-          const { residueIdx, chainId } = p;
-          const activations = chainActivations[chainId];
-
-          // If there is no activation, use a faint default color of the chain.
-          if (!activations || !activations[residueIdx]) {
-            if (!chainColors.has(chainId)) {
-              const colorIndex = chainColors.size % defaultChainColors.length;
-              chainColors.set(chainId, defaultChainColors[colorIndex]);
-            }
-            return chainColors.get(chainId)!;
-          }
-
-          // Otherwise, use the activation value to color the residue.
-          const color =
-            maxValue > 0 ? redColorMapRGB(activations[residueIdx], maxValue) : [255, 255, 255];
-          return Color.fromRgb(color[0], color[1], color[2]);
-        },
-        defaultColor: Color(0xffffff),
-      },
-      getLabel() {
-        return "Activation colors";
-      },
-    });
-  };
-
-  // Parse residue info (index and chain) from Molstar hover label
+  // Parse residue info from Molstar hover label
+  // Returns the 0-indexed sequence position
   const parseResidueInfoFromLabel = (
     label: string | null
-  ): { index: number; chainId: string } | null => {
+  ): { seqPos: number; chainId: string } | null => {
     if (!label) return null;
-    // Parse format like "ALA 42" or "ALA 42 | Chain A"
-    const match = label.match(/([A-Z]{3})\s+(\d+)(?:\s*\|\s*Chain\s+([A-Za-z0-9]+))?/i);
+    // Parse format like "ALA 42" or "ALA 42 (Chain a)"
+    const match = label.match(/([A-Z]{3})\s+(\d+)(?:\s*\(Chain\s+([A-Za-z0-9]+)\))?/i);
     if (!match) return null;
-    const residueNumber = Number(match[2]);
-    const chainId = match[3] || null;
-    if (Number.isNaN(residueNumber)) return null;
-    return { index: residueNumber - 1, chainId: chainId || "" };
+    const authSeqId = Number(match[2]);
+    const chainId = match[3] || selectedChainId || "";
+    if (Number.isNaN(authSeqId)) return null;
+
+    // Look up the sequence position using auth_seq_id
+    const chainMap = authSeqIdToSeqPosRef.current.get(chainId);
+    if (!chainMap) return null;
+    const seqPos = chainMap.get(authSeqId);
+    if (seqPos === undefined) return null;
+
+    return { seqPos, chainId };
   };
 
-  // Build residue index maps for all chains: chainId -> (seqId -> residueIndex)
-  const buildResidueIndexMaps = (structure: Structure): Map<string, Map<number, number>> => {
-    const chainMaps = new Map<string, Map<number, number>>();
-    const model = structure.models[0];
-    if (!model) return chainMaps;
-
-    const { chains, residues, residueAtomSegments, chainAtomSegments } = model.atomicHierarchy;
-
-    for (let rI = 0, _rI = residues._rowCount; rI < _rI; rI++) {
-      // Get the chain ID for this residue
-      const atomOffset = residueAtomSegments.offsets[rI];
-      const chainIdx = chainAtomSegments.index[atomOffset];
-      const chainId = chains.auth_asym_id.value(chainIdx);
-      const labelSeqId = residues.label_seq_id.value(rI);
-      const authSeqId = residues.auth_seq_id.value(rI);
-      const seqId = labelSeqId || authSeqId;
-      if (!seqId) continue;
-
-      if (!chainMaps.has(chainId)) {
-        chainMaps.set(chainId, new Map());
-      }
-      const chainMap = chainMaps.get(chainId)!;
-      if (!chainMap.has(seqId)) {
-        chainMap.set(seqId, rI);
-      }
-    }
-    return chainMaps;
-  };
-
-  // Get Molstar loci for highlighting a specific residue in a chain
+  // Get Molstar loci for highlighting a specific residue
   const getResidueLoci = (
     structure: Structure,
     residueIndex: number,
@@ -176,7 +216,6 @@ const PDBStructureViewer = ({
     for (const unit of structure.units) {
       if (!Unit.isAtomic(unit)) continue;
 
-      // Check if this unit belongs to the target chain
       const model = unit.model;
       const { chains, chainAtomSegments } = model.atomicHierarchy;
       const unitChainIdx = chainAtomSegments.index[unit.elements[0]];
@@ -196,7 +235,7 @@ const PDBStructureViewer = ({
     return StructureElement.Loci(structure, elements);
   };
 
-  // Group chains by sequence (like FullSeqsViewer)
+  // Group chains by sequence
   const groupedChains = useMemo(() => {
     const groups = new Map<
       string,
@@ -246,7 +285,6 @@ const PDBStructureViewer = ({
     };
 
     const renderViewer = async (pdbData: string) => {
-      // Wait for the element to be available in the DOM
       const waitForElement = () => {
         return new Promise<HTMLElement>((resolve, reject) => {
           const element = document.getElementById(viewerId);
@@ -287,7 +325,7 @@ const PDBStructureViewer = ({
       await plugin.init();
       plugin.initViewer(canvas, container as HTMLDivElement);
 
-      // Enable residue-level hover labels and bidirectional highlighting
+      // Enable residue-level hover labels
       plugin.managers.interactivity.setProps({ granularity: "residue" });
       const hasMultipleChains = proteinActivationsData.chains.length > 1;
       plugin.behaviors.labels.highlight.subscribe(({ labels }) => {
@@ -295,10 +333,9 @@ const PDBStructureViewer = ({
           labels.length > 0 ? parseMolstarLabel(String(labels[0]), hasMultipleChains) : null;
         setHoverLabel(label);
 
-        // Parse residue info for bidirectional hover
         const residueInfo = parseResidueInfoFromLabel(label);
         if (residueInfo) {
-          setStructureHoverIndex(residueInfo.index);
+          setStructureHoverIndex(residueInfo.seqPos);
           // Auto-switch tabs when hovering over a different chain
           if (residueInfo.chainId && residueInfo.chainId !== selectedChainId) {
             const group = groupedChains.find((g) => g.ids.includes(residueInfo.chainId));
@@ -344,13 +381,24 @@ const PDBStructureViewer = ({
           }
         });
 
-        // Store structure reference and build residue index maps for bidirectional hover
+        // Build residue mapping indices
         const loadedStructure =
           plugin.managers.structure.hierarchy.current.structures[0]?.cell.obj?.data;
         if (loadedStructure) {
           structureRef.current = loadedStructure;
-          residueIndexBySeqIdRef.current = buildResidueIndexMaps(loadedStructure);
-          residueLociCacheRef.current = new Map();
+          const model = loadedStructure.models[0];
+          if (model) {
+            const seqPosMap = buildSeqPosToResidueMap(model);
+            seqPosToResidueRef.current = seqPosMap;
+            authSeqIdToSeqPosRef.current = buildAuthSeqIdToSeqPosMap(model);
+
+            // Build set of positions that exist in structure for each chain
+            const positionsMap = new Map<string, Set<number>>();
+            for (const [chainId, posMap] of seqPosMap.entries()) {
+              positionsMap.set(chainId, new Set(posMap.keys()));
+            }
+            setStructurePositions(positionsMap);
+          }
         }
       } catch (error) {
         console.error("Error loading structure:", error);
@@ -401,26 +449,18 @@ const PDBStructureViewer = ({
       return;
     }
 
-    const seqId = sequenceHoverIndex + 1; // Convert to 1-based
+    // sequenceHoverIndex is 0-indexed, matching our seqPos
+    const chainMap = seqPosToResidueRef.current.get(selectedChainId);
+    if (!chainMap) return;
 
-    // Get or create loci cache for this chain
-    if (!residueLociCacheRef.current.has(selectedChainId)) {
-      residueLociCacheRef.current.set(selectedChainId, new Map());
-    }
-    const chainLociCache = residueLociCacheRef.current.get(selectedChainId)!;
-
-    let loci = chainLociCache.get(seqId);
-    if (!loci) {
-      const chainResidueMap = residueIndexBySeqIdRef.current.get(selectedChainId);
-      if (!chainResidueMap) return;
-
-      const residueIndex = chainResidueMap.get(seqId);
-      if (residueIndex === undefined) return;
-
-      loci = getResidueLoci(structure, residueIndex, selectedChainId);
-      chainLociCache.set(seqId, loci);
+    const residueIndex = chainMap.get(sequenceHoverIndex);
+    if (residueIndex === undefined) {
+      // This residue is not in the structure (disordered)
+      plugin.managers.interactivity.lociHighlights.clearHighlights();
+      return;
     }
 
+    const loci = getResidueLoci(structure, residueIndex, selectedChainId);
     plugin.managers.interactivity.lociHighlights.highlightOnly({ loci });
   }, [sequenceHoverIndex, selectedChainId]);
 
@@ -481,9 +521,15 @@ const PDBStructureViewer = ({
               >
                 {currentChainGroup.chain.sequence.split("").map((char, index) => {
                   const activation = currentChainGroup.chain.activations[index] ?? 0;
+                  const isActive = activeResidueIndex === index;
+
+                  // Check if this position exists in the structure
+                  const chainPositions = structurePositions.get(selectedChainId || "");
+                  const isInStructure = chainPositions?.has(index) ?? false;
+
+                  // Always show activation colors
                   const color =
                     maxActivation > 0 ? redColorMapHex(activation, maxActivation) : "transparent";
-                  const isActive = activeResidueIndex === index;
 
                   return (
                     <Tooltip key={index}>
@@ -497,9 +543,11 @@ const PDBStructureViewer = ({
                             height: "16px",
                             alignItems: "center",
                             justifyContent: "center",
-                            cursor: "pointer",
-                            boxShadow: isActive ? "0 0 0 2px #2563eb" : "none",
+                            cursor: isInStructure ? "pointer" : "default",
+                            boxShadow: isActive && isInStructure ? "0 0 0 2px #2563eb" : "none",
                             borderRadius: "2px",
+                            // Subtle indicator for residues not in structure
+                            opacity: isInStructure ? 1 : 0.6,
                           }}
                         >
                           {char}
@@ -510,6 +558,12 @@ const PDBStructureViewer = ({
                           Position: {index + 1}
                           <br />
                           SAE Activation: {activation.toFixed(2)}
+                          {!isInStructure && (
+                            <>
+                              <br />
+                              <span className="text-gray-400">(Not in structure)</span>
+                            </>
+                          )}
                         </div>
                       </TooltipContent>
                     </Tooltip>
