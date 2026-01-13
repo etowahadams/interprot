@@ -13,7 +13,6 @@ import { Color } from "molstar/lib/mol-util/color";
 import {
   ProteinActivationsData,
   redColorMapRGB,
-  redColorMapHex,
   createMolstarSpec,
   parseMolstarLabel,
   groupChainsBySequence,
@@ -23,6 +22,7 @@ import proteinEmoji from "../protein.png";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { StructureCache, PDBID } from "@/utils";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import SequenceActivationViewer from "@/components/SequenceActivationViewer";
 
 interface PDBStructureViewerProps {
   viewerId: string;
@@ -496,7 +496,7 @@ const PDBStructureViewer = ({
 
       {/* Sequence Viewer with Tabs */}
       {!error && currentChainGroup && (
-        <div className="rounded-lg border bg-white p-3">
+        <div>
           {/* Tabs for chain selection */}
           {groupedChains.length > 1 && (
             <Tabs value={selectedChainId || ""} onValueChange={setSelectedChainId} className="mb-3">
@@ -517,76 +517,15 @@ const PDBStructureViewer = ({
             </div>
           )}
 
-          {/* Fixed info bar - updates on hover */}
-          <div className="text-xs text-gray-600 mb-2 h-5 flex items-center gap-3 border-b pb-2">
-            {sequenceHoverIndex !== null ? (
-              <>
-                <span>
-                  <span className="text-gray-400">Position:</span>{" "}
-                  <span className="font-medium text-gray-900">{sequenceHoverIndex + 1}</span>
-                </span>
-                <span>
-                  <span className="text-gray-400">Residue:</span>{" "}
-                  <span className="font-medium text-gray-900">
-                    {currentChainGroup.items[0].sequence[sequenceHoverIndex]}
-                  </span>
-                </span>
-                <span>
-                  <span className="text-gray-400">SAE Activation:</span>{" "}
-                  <span className="font-medium text-gray-900">
-                    {(currentChainGroup.items[0].activations[sequenceHoverIndex] ?? 0).toFixed(2)}
-                  </span>
-                </span>
-                {!(
-                  structurePositions.get(selectedChainId || "")?.has(sequenceHoverIndex) ?? false
-                ) && <span className="text-gray-400 italic">(Not in structure)</span>}
-              </>
-            ) : (
-              <span className="text-gray-400 italic">Hover over a residue to see details</span>
-            )}
-          </div>
-
-          {/* Sequence display */}
-          <div className="overflow-x-auto" onMouseLeave={() => setSequenceHoverIndex(null)}>
-            <div
-              className="flex flex-wrap gap-0.5 p-0.5"
-              style={{ fontFamily: "monospace", fontSize: "12px" }}
-            >
-              {currentChainGroup.items[0].sequence.split("").map((char, index) => {
-                const activation = currentChainGroup.items[0].activations[index] ?? 0;
-                const isActive = activeResidueIndex === index;
-
-                // Check if this position exists in the structure
-                const chainPositions = structurePositions.get(selectedChainId || "");
-                const isInStructure = chainPositions?.has(index) ?? false;
-
-                // Always show activation colors
-                const color =
-                  maxActivation > 0 ? redColorMapHex(activation, maxActivation) : "transparent";
-
-                return (
-                  <span
-                    key={index}
-                    onMouseEnter={() => setSequenceHoverIndex(index)}
-                    style={{
-                      backgroundColor: color,
-                      display: "inline-flex",
-                      width: "12px",
-                      height: "16px",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      cursor: isInStructure ? "pointer" : "default",
-                      boxShadow: isActive && isInStructure ? "0 0 0 2px #2563eb" : "none",
-                      borderRadius: "2px",
-                      opacity: isInStructure ? 1 : 0.6,
-                    }}
-                  >
-                    {char}
-                  </span>
-                );
-              })}
-            </div>
-          </div>
+          <SequenceActivationViewer
+            sequence={currentChainGroup.items[0].sequence}
+            activations={currentChainGroup.items[0].activations}
+            maxActivation={maxActivation}
+            activeResidueIndex={activeResidueIndex}
+            hoverIndex={sequenceHoverIndex}
+            onHoverIndexChange={setSequenceHoverIndex}
+            structurePositions={structurePositions.get(selectedChainId || "")}
+          />
         </div>
       )}
 

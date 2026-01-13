@@ -17,11 +17,10 @@ import {
   ProteinActivationsData,
   StructureCache,
   redColorMapRGB,
-  redColorMapHex,
   createMolstarSpec,
   parseMolstarLabel,
 } from "@/utils";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import SequenceActivationViewer from "@/components/SequenceActivationViewer";
 
 interface CustomStructureViewerProps {
   viewerId: string;
@@ -48,6 +47,7 @@ const CustomStructureViewer = ({
   const structureRef = useRef<Structure | null>(null);
   const residueIndexBySeqIdRef = useRef<Map<number, number>>(new Map());
   const residueLociCacheRef = useRef<Map<number, StructureElement.Loci>>(new Map());
+  const [structurePositions, setStructurePositions] = useState<Set<number> | null>(null);
 
   // Assume there is only one chain for a user inputted protein
   const { sequence, activations } = proteinActivationsData.chains[0];
@@ -241,6 +241,11 @@ const CustomStructureViewer = ({
           structureRef.current = loadedStructure;
           residueIndexBySeqIdRef.current = buildResidueIndexMap(loadedStructure);
           residueLociCacheRef.current = new Map();
+          const positions = new Set<number>();
+          for (const seqId of residueIndexBySeqIdRef.current.keys()) {
+            positions.add(seqId - 1);
+          }
+          setStructurePositions(positions);
         }
       } catch (error) {
         console.error("Error loading structure:", error);
@@ -250,6 +255,7 @@ const CustomStructureViewer = ({
 
     const renderStructure = async () => {
       setIsLoading(true);
+      setStructurePositions(null);
       try {
         const pdbData = StructureCache[sequence] || (await getStructure(sequence));
         StructureCache[sequence] = pdbData;
@@ -261,10 +267,12 @@ const CustomStructureViewer = ({
     };
 
     if (!sequence || activations.length === 0) {
+      setStructurePositions(null);
       onLoad?.();
       return;
     }
     if (sequence.length > 400) {
+      setStructurePositions(null);
       setWarning(
         "No structure generated. We are folding with the ESMFold API which has a limit of 400 residues. If you'd like to see a structure for your sequence, try a shorter sequence."
       );
@@ -346,53 +354,15 @@ const CustomStructureViewer = ({
 
       {/* Sequence Viewer - shown even for long sequences without structure */}
       {!error && (
-        <div className="rounded-lg border bg-white p-3">
-          <div className="overflow-x-auto" onMouseLeave={() => setSequenceHoverIndex(null)}>
-            <TooltipProvider delayDuration={100}>
-              <div
-                className="flex flex-wrap gap-0.5"
-                style={{ fontFamily: "monospace", fontSize: "12px" }}
-              >
-                {sequence.split("").map((char, index) => {
-                  const activation = activations[index] ?? 0;
-                  const color =
-                    maxActivation > 0 ? redColorMapHex(activation, maxActivation) : "transparent";
-                  const isActive = activeResidueIndex === index;
-
-                  return (
-                    <Tooltip key={index}>
-                      <TooltipTrigger asChild>
-                        <span
-                          onMouseEnter={() => setSequenceHoverIndex(index)}
-                          style={{
-                            backgroundColor: color,
-                            display: "inline-flex",
-                            width: "12px",
-                            height: "16px",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            cursor: "pointer",
-                            boxShadow: isActive ? "0 0 0 2px #2563eb" : "none",
-                            borderRadius: "2px",
-                          }}
-                        >
-                          {char}
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <div className="text-xs">
-                          Position: {index + 1}
-                          <br />
-                          SAE Activation: {activation.toFixed(2)}
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  );
-                })}
-              </div>
-            </TooltipProvider>
-          </div>
-        </div>
+        <SequenceActivationViewer
+          sequence={sequence}
+          activations={activations}
+          maxActivation={maxActivation}
+          activeResidueIndex={activeResidueIndex}
+          hoverIndex={sequenceHoverIndex}
+          onHoverIndexChange={setSequenceHoverIndex}
+          structurePositions={structurePositions ?? undefined}
+        />
       )}
 
       {error && <small className="text-red-500">{error}</small>}
