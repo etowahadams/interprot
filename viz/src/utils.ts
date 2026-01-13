@@ -137,6 +137,39 @@ export type PDBChainsData = {
   sequence: AminoAcidSequence;
 };
 
+export type ChainSequenceGroup<T extends { id: string; sequence: AminoAcidSequence }> = {
+  ids: string[];
+  sequence: AminoAcidSequence;
+  items: T[];
+};
+
+export const groupChainsBySequence = <T extends { id: string; sequence: AminoAcidSequence }>(
+  chains: T[]
+): Array<ChainSequenceGroup<T>> => {
+  const groupsBySequence = new Map<string, ChainSequenceGroup<T>>();
+  const orderedGroups: Array<ChainSequenceGroup<T>> = [];
+
+  chains.forEach((chain) => {
+    const existing = groupsBySequence.get(chain.sequence);
+    if (existing) {
+      existing.ids.push(chain.id);
+      existing.items.push(chain);
+    } else {
+      const group = { ids: [chain.id], sequence: chain.sequence, items: [chain] };
+      groupsBySequence.set(chain.sequence, group);
+      orderedGroups.push(group);
+    }
+  });
+
+  return orderedGroups;
+};
+
+export const formatChainIds = (ids: string[]) => {
+  if (ids.length <= 1) return ids[0] ?? "";
+  if (ids.length === 2) return `${ids[0]} & ${ids[1]}`;
+  return `${ids.slice(0, -1).join(", ")} & ${ids[ids.length - 1]}`;
+};
+
 interface PolymerEntity {
   entity_poly: {
     pdbx_seq_one_letter_code_can: string;

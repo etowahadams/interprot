@@ -16,6 +16,8 @@ import {
   redColorMapHex,
   createMolstarSpec,
   parseMolstarLabel,
+  groupChainsBySequence,
+  formatChainIds,
 } from "@/utils.ts";
 import proteinEmoji from "../protein.png";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -236,21 +238,7 @@ const PDBStructureViewer = ({
 
   // Group chains by sequence
   const groupedChains = useMemo(() => {
-    const groups = new Map<
-      string,
-      { ids: string[]; chain: (typeof proteinActivationsData.chains)[0] }
-    >();
-
-    proteinActivationsData.chains.forEach((chain) => {
-      const existing = groups.get(chain.sequence);
-      if (existing) {
-        existing.ids.push(chain.id);
-      } else {
-        groups.set(chain.sequence, { ids: [chain.id], chain });
-      }
-    });
-
-    return Array.from(groups.values());
+    return groupChainsBySequence(proteinActivationsData.chains);
   }, [proteinActivationsData.chains]);
 
   // Initialize selected chain to first chain
@@ -499,7 +487,7 @@ const PDBStructureViewer = ({
               <TabsList className="flex-wrap h-auto gap-1">
                 {groupedChains.map(({ ids }) => (
                   <TabsTrigger key={ids.join(",")} value={ids[0]} className="text-xs">
-                    Chain {ids.join(", ")}
+                    Chain {formatChainIds(ids)}
                   </TabsTrigger>
                 ))}
               </TabsList>
@@ -508,7 +496,9 @@ const PDBStructureViewer = ({
 
           {/* Single chain label when only one chain */}
           {groupedChains.length === 1 && groupedChains[0].ids[0] !== "Unknown" && (
-            <div className="font-medium mb-2 text-sm">Chain {groupedChains[0].ids.join(", ")}</div>
+            <div className="font-medium mb-2 text-sm">
+              Chain {formatChainIds(groupedChains[0].ids)}
+            </div>
           )}
 
           {/* Fixed info bar - updates on hover */}
@@ -522,13 +512,13 @@ const PDBStructureViewer = ({
                 <span>
                   <span className="text-gray-400">Residue:</span>{" "}
                   <span className="font-medium text-gray-900">
-                    {currentChainGroup.chain.sequence[sequenceHoverIndex]}
+                    {currentChainGroup.items[0].sequence[sequenceHoverIndex]}
                   </span>
                 </span>
                 <span>
                   <span className="text-gray-400">SAE Activation:</span>{" "}
                   <span className="font-medium text-gray-900">
-                    {(currentChainGroup.chain.activations[sequenceHoverIndex] ?? 0).toFixed(2)}
+                    {(currentChainGroup.items[0].activations[sequenceHoverIndex] ?? 0).toFixed(2)}
                   </span>
                 </span>
                 {!(
@@ -546,8 +536,8 @@ const PDBStructureViewer = ({
               className="flex flex-wrap gap-0.5 p-0.5"
               style={{ fontFamily: "monospace", fontSize: "12px" }}
             >
-              {currentChainGroup.chain.sequence.split("").map((char, index) => {
-                const activation = currentChainGroup.chain.activations[index] ?? 0;
+              {currentChainGroup.items[0].sequence.split("").map((char, index) => {
+                const activation = currentChainGroup.items[0].activations[index] ?? 0;
                 const isActive = activeResidueIndex === index;
 
                 // Check if this position exists in the structure

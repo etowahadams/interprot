@@ -23,6 +23,8 @@ import {
   AminoAcidSequence,
   getPDBChainsData,
   PDBChainsData,
+  groupChainsBySequence,
+  formatChainIds,
 } from "@/utils";
 import useUrlState from "@/hooks/useUrlState";
 import { SAEContext } from "@/SAEContext";
@@ -78,6 +80,20 @@ export default function CustomSeqSearchPage() {
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [chains, setChains] = useState<PDBChainsData[]>([]);
+  const chainGroups = useMemo(() => {
+    return groupChainsBySequence(chains).map((group) => ({
+      ...group,
+      key: group.ids.join("|"),
+    }));
+  }, [chains]);
+  const chainGroupById = useMemo(() => {
+    const map = new Map<string, { ids: string[]; sequence: AminoAcidSequence; key: string }>();
+    chainGroups.forEach((group) => {
+      group.ids.forEach((id) => map.set(id, group));
+    });
+    return map;
+  }, [chainGroups]);
+  const selectedChainGroupKey = urlState.chain ? chainGroupById.get(urlState.chain)?.key ?? "" : "";
 
   // Sync local filter state from URL when dropdown opens
   const handleFilterOpenChange = (open: boolean) => {
@@ -363,19 +379,27 @@ export default function CustomSeqSearchPage() {
                     type="single"
                     size="sm"
                     variant="outline"
-                    value={urlState.chain ?? ""}
+                    value={selectedChainGroupKey}
                     onValueChange={(value) => {
-                      if (value) setUrlState({ chain: value });
+                      if (!value) return;
+                      const selectedGroup = chainGroups.find((group) => group.key === value);
+                      if (!selectedGroup) return;
+                      const preferredId = selectedGroup.ids.includes(urlState.chain ?? "")
+                        ? urlState.chain
+                        : selectedGroup.ids[0];
+                      if (preferredId) {
+                        setUrlState({ chain: preferredId });
+                      }
                     }}
                     className="justify-start"
                   >
-                    {chains.map((chain) => (
+                    {chainGroups.map((group) => (
                       <ToggleGroupItem
-                        key={chain.id}
-                        value={chain.id}
-                        aria-label={`Chain ${chain.id}`}
+                        key={group.key}
+                        value={group.key}
+                        aria-label={`Chain ${group.ids.join(", ")}`}
                       >
-                        {chain.id}
+                        {formatChainIds(group.ids)}
                       </ToggleGroupItem>
                     ))}
                   </ToggleGroup>
