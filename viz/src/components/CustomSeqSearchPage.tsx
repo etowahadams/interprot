@@ -3,7 +3,6 @@ import SAEFeatureCard from "./SAEFeatureCard";
 import {
   Pagination,
   PaginationContent,
-  PaginationEllipsis,
   PaginationItem,
   PaginationNext,
   PaginationPrevious,
@@ -24,6 +23,8 @@ import {
   AminoAcidSequence,
   getPDBChainsData,
   PDBChainsData,
+  groupChainsBySequence,
+  formatChainIds,
 } from "@/utils";
 import useUrlState from "@/hooks/useUrlState";
 import { SAEContext } from "@/SAEContext";
@@ -37,9 +38,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Filter } from "lucide-react";
 
-const RESULTS_PER_PAGE = 20;
+const RESULTS_PER_PAGE = 10;
 const DEFAULT_MAX_PERCENT_ACTIVATION = 20;
 const DEFAULT_SORT_BY = "max";
 
@@ -77,6 +80,31 @@ export default function CustomSeqSearchPage() {
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [chains, setChains] = useState<PDBChainsData[]>([]);
+  const chainGroups = useMemo(() => {
+    return groupChainsBySequence(chains).map((group) => ({
+      ...group,
+      key: group.ids.join("|"),
+    }));
+  }, [chains]);
+  const chainGroupById = useMemo(() => {
+    const map = new Map<string, { ids: string[]; sequence: AminoAcidSequence; key: string }>();
+    chainGroups.forEach((group) => {
+      group.ids.forEach((id) => map.set(id, group));
+    });
+    return map;
+  }, [chainGroups]);
+  const selectedChainGroupKey = urlState.chain ? chainGroupById.get(urlState.chain)?.key ?? "" : "";
+
+  // Sync local filter state from URL when dropdown opens
+  const handleFilterOpenChange = (open: boolean) => {
+    if (open) {
+      setStartPos(urlState.start);
+      setEndPos(urlState.end);
+      setMinPctAct(urlState.minPctAct);
+      setMaxPctAct(urlState.maxPctAct);
+    }
+    setIsFilterOpen(open);
+  };
 
   const aminoAcidIdentityDims = useMemo(() => {
     const curated = SAE_CONFIGS[model]?.curated || [];
@@ -98,7 +126,6 @@ export default function CustomSeqSearchPage() {
     setIsFilterOpen(false);
   };
 
-  // FIXME: there's a bug where this doesn't clear maxPctAct
   const clearFilters = () => {
     setStartPos(undefined);
     setEndPos(undefined);
@@ -109,7 +136,7 @@ export default function CustomSeqSearchPage() {
       end: undefined,
       minPctAct: undefined,
       maxPctAct: undefined,
-      hideAA: undefined, // undefined means filter is ON (default)
+      hideAA: undefined,
     });
     setCurrentPage(1);
     setIsFilterOpen(false);
@@ -117,28 +144,42 @@ export default function CustomSeqSearchPage() {
 
   const filteredResults = useMemo(() => {
     return searchResults.filter((result) => {
-      // Filter out amino acid identity features (default on, hideAA !== "0")
-      if (urlState.hideAA !== "0" && aminoAcidIdentityDims.has(result.dim)) {
+      // Filter out amino acid identity features when hideAA=1
+      if (urlState.hideAA === "1" && aminoAcidIdentityDims.has(result.dim)) {
         return false;
       }
 
-      if (!urlState.start && !urlState.end && !urlState.minPctAct && !urlState.maxPctAct)
-        return true;
-      const hasActivationInRange = result.sae_acts.some((act, pos) => {
-        const afterStart = !urlState.start || pos >= urlState.start;
-        const beforeEnd = !urlState.end || pos <= urlState.end;
-        return act > 0 && afterStart && beforeEnd;
-      });
-
-      if (urlState.minPctAct || urlState.maxPctAct) {
+      // Apply max % activated filter only when explicitly set
+      if (urlState.maxPctAct !== undefined) {
         const activatedCount = result.sae_acts.filter((act) => act > 0).length;
         const percentActivated = (activatedCount / result.sae_acts.length) * 100;
-        const aboveMin = !urlState.minPctAct || percentActivated >= urlState.minPctAct;
-        const belowMax = !urlState.maxPctAct || percentActivated <= urlState.maxPctAct;
-        return hasActivationInRange && aboveMin && belowMax;
+        if (percentActivated > urlState.maxPctAct) {
+          return false;
+        }
       }
 
-      return hasActivationInRange;
+      // Apply min % activated filter if set
+      if (urlState.minPctAct) {
+        const activatedCount = result.sae_acts.filter((act) => act > 0).length;
+        const percentActivated = (activatedCount / result.sae_acts.length) * 100;
+        if (percentActivated < urlState.minPctAct) {
+          return false;
+        }
+      }
+
+      // Apply position range filter if set
+      if (urlState.start || urlState.end) {
+        const hasActivationInRange = result.sae_acts.some((act, pos) => {
+          const afterStart = !urlState.start || pos >= urlState.start;
+          const beforeEnd = !urlState.end || pos <= urlState.end;
+          return act > 0 && afterStart && beforeEnd;
+        });
+        if (!hasActivationInRange) {
+          return false;
+        }
+      }
+
+      return true;
     });
   }, [
     searchResults,
@@ -155,8 +196,6 @@ export default function CustomSeqSearchPage() {
     (currentPage - 1) * RESULTS_PER_PAGE,
     currentPage * RESULTS_PER_PAGE
   );
-  const startIndex = (currentPage - 1) * RESULTS_PER_PAGE + 1;
-  const endIndex = Math.min(currentPage * RESULTS_PER_PAGE, filteredResults.length);
 
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
@@ -261,6 +300,7 @@ export default function CustomSeqSearchPage() {
     if (urlState.chain && chains.length > 0) {
       const chain = chains.find((c) => c.id === urlState.chain);
       if (chain) {
+        setIsLoading(true);
         setSearchResults([]);
         submittedSeqRef.current = chain.sequence;
         getSAEAllDimsActivations({
@@ -268,22 +308,37 @@ export default function CustomSeqSearchPage() {
           sae_name: model,
         }).then((results) => {
           setSearchResults(results);
+          setIsLoading(false);
         });
       }
     }
   }, [urlState.chain, chains, model]);
 
-  // Set default filter and sort once results are loaded
+  // Set default filter and sort once results are loaded (only on initial load)
+  const prevResultsLength = useRef(0);
   useEffect(() => {
-    if (!searchResults.length) return;
-    if (!urlState.maxPctAct) {
-      setUrlState({ maxPctAct: DEFAULT_MAX_PERCENT_ACTIVATION });
+    // Only initialize defaults when results first load (length goes from 0 to > 0)
+    const isInitialLoad = prevResultsLength.current === 0 && searchResults.length > 0;
+    prevResultsLength.current = searchResults.length;
+
+    if (!isInitialLoad) return;
+
+    // Combine into single setUrlState call to avoid overwriting
+    const updates: Partial<UrlState> = {};
+    if (urlState.maxPctAct === undefined) {
+      updates.maxPctAct = DEFAULT_MAX_PERCENT_ACTIVATION;
       setMaxPctAct(DEFAULT_MAX_PERCENT_ACTIVATION);
     }
-    if (!urlState.sortBy) {
-      setUrlState({ sortBy: DEFAULT_SORT_BY });
+    if (urlState.hideAA === undefined) {
+      updates.hideAA = "1";
     }
-  }, [searchResults.length, urlState.maxPctAct, urlState.sortBy, setUrlState]);
+    if (!urlState.sortBy) {
+      updates.sortBy = DEFAULT_SORT_BY;
+    }
+    if (Object.keys(updates).length > 0) {
+      setUrlState(updates);
+    }
+  }, [searchResults.length, urlState.maxPctAct, urlState.hideAA, urlState.sortBy, setUrlState]);
 
   // Sort results whenever the sortBy or start/end position changes
   useEffect(() => {
@@ -314,41 +369,72 @@ export default function CustomSeqSearchPage() {
               }
             }}
             loading={isLoading}
-            buttonText="Search"
             exampleSeqs={!hasSubmittedInput ? SAE_CONFIGS[model].searchExamples : undefined}
+            submittedInput={urlState.pdb || urlState.seq}
+            bottomLeftSlot={
+              !isLoading && urlState.pdb && chains.length > 0 ? (
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-muted-foreground">Chain:</span>
+                  <ToggleGroup
+                    type="single"
+                    size="sm"
+                    variant="outline"
+                    value={selectedChainGroupKey}
+                    onValueChange={(value) => {
+                      if (!value) return;
+                      const selectedGroup = chainGroups.find((group) => group.key === value);
+                      if (!selectedGroup) return;
+                      const preferredId = selectedGroup.ids.includes(urlState.chain ?? "")
+                        ? urlState.chain
+                        : selectedGroup.ids[0];
+                      if (preferredId) {
+                        setUrlState({ chain: preferredId });
+                      }
+                    }}
+                    className="justify-start"
+                  >
+                    {chainGroups.map((group) => (
+                      <ToggleGroupItem
+                        key={group.key}
+                        value={group.key}
+                        aria-label={`Chain ${group.ids.join(", ")}`}
+                      >
+                        {formatChainIds(group.ids)}
+                      </ToggleGroupItem>
+                    ))}
+                  </ToggleGroup>
+                </div>
+              ) : undefined
+            }
           />
         </div>
 
         <div className="flex flex-col gap-2 mt-4 text-left">
-          {!isLoading && urlState.pdb && (
-            <div className="flex items-center gap-2 mb-4">
-              <Select
-                value={urlState.chain}
-                onValueChange={(value) => setUrlState({ chain: value })}
-              >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Select chain" />
-                </SelectTrigger>
-                <SelectContent>
-                  {chains.map((chain) => (
-                    <SelectItem key={chain.id} value={chain.id}>
-                      Chain {chain.id}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {isLoading && hasSubmittedInput && (
+            <div className="flex flex-col gap-4 mt-4">
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-32 w-full rounded-lg" />
+              ))}
             </div>
           )}
           {searchResults.length > 0 && (
             <>
               <div className="sm:flex sm:flex-row sm:justify-between sm:items-center px-2">
                 <div className="flex flex-col sm:flex-row gap-4 w-full items-start sm:items-center">
-                  <div className="order-2 sm:order-1 text-sm">
-                    {startIndex} - {endIndex} of {filteredResults.length} activating features
+                  <div className="order-2 sm:order-1">
+                    <div className="text-sm">
+                      <span className="font-medium">{filteredResults.length}</span> features
+                      {filteredResults.length !== searchResults.length && (
+                        <span className="text-muted-foreground">
+                          {" "}
+                          (filtered from {searchResults.length} activating features)
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 order-1 sm:order-2 sm:ml-auto w-full sm:w-auto">
-                    <DropdownMenu open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+                    <DropdownMenu open={isFilterOpen} onOpenChange={handleFilterOpenChange}>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" size="sm" className="flex items-center gap-2">
                           <Filter className="h-4 w-4" />
@@ -356,8 +442,8 @@ export default function CustomSeqSearchPage() {
                           {(urlState.start ||
                             urlState.end ||
                             urlState.minPctAct ||
-                            urlState.maxPctAct ||
-                            urlState.hideAA === "0") && (
+                            urlState.maxPctAct !== undefined ||
+                            urlState.hideAA === "1") && (
                             <span className="ml-1 h-2 w-2 rounded-full bg-primary"></span>
                           )}
                         </Button>
@@ -366,12 +452,13 @@ export default function CustomSeqSearchPage() {
                         <DropdownMenuLabel>Filter Results</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuCheckboxItem
-                          checked={urlState.hideAA !== "0"}
+                          checked={urlState.hideAA === "1"}
                           onCheckedChange={(checked) => {
-                            setUrlState({ hideAA: checked ? undefined : "0" });
+                            setUrlState({ hideAA: checked ? "1" : undefined });
                             setCurrentPage(1);
                           }}
                           onSelect={(e) => e.preventDefault()}
+                          className="cursor-pointer"
                         >
                           Hide amino acid identity features
                         </DropdownMenuCheckboxItem>
@@ -437,7 +524,7 @@ export default function CustomSeqSearchPage() {
                                 placeholder="max %"
                                 min={0}
                                 max={100}
-                                value={maxPctAct || ""}
+                                value={maxPctAct ?? ""}
                                 onChange={(e) => {
                                   const val = e.target.value ? parseInt(e.target.value) : undefined;
                                   setMaxPctAct(val);
@@ -504,50 +591,62 @@ export default function CustomSeqSearchPage() {
                       }}
                       highlightStart={urlState.start}
                       highlightEnd={urlState.end}
+                      seqContext={{ pdb: urlState.pdb, seq: urlState.seq }}
                     />
                   ))}
                   <Pagination>
                     <PaginationContent>
-                      {currentPage > 1 && (
-                        <>
-                          <PaginationItem>
-                            <PaginationPrevious
-                              className="cursor-pointer"
-                              onClick={() => {
-                                handlePageChange(currentPage - 1);
-                                window.scrollTo({ top: 0, behavior: "smooth" });
-                              }}
-                              isActive={currentPage > 1}
-                            />
-                          </PaginationItem>
-                          <PaginationItem>
-                            <PaginationEllipsis />
-                          </PaginationItem>
-                        </>
-                      )}
-                      <PaginationItem>{currentPage}</PaginationItem>
-                      {currentPage < totalPages && (
-                        <>
-                          <PaginationItem>
-                            <PaginationEllipsis />
-                          </PaginationItem>
-                          <PaginationItem>
-                            <PaginationNext
-                              className="cursor-pointer"
-                              onClick={() => {
-                                handlePageChange(currentPage + 1);
-                                window.scrollTo({ top: 0, behavior: "smooth" });
-                              }}
-                              isActive={currentPage !== totalPages}
-                            />
-                          </PaginationItem>
-                        </>
-                      )}
+                      <PaginationItem>
+                        <PaginationPrevious
+                          className={
+                            currentPage > 1 ? "cursor-pointer" : "pointer-events-none opacity-50"
+                          }
+                          onClick={() => {
+                            if (currentPage > 1) {
+                              handlePageChange(currentPage - 1);
+                              window.scrollTo({ top: 0, behavior: "smooth" });
+                            }
+                          }}
+                          isActive={currentPage > 1}
+                        />
+                      </PaginationItem>
+                      <PaginationItem>
+                        <span className="px-4 text-sm">
+                          Page {currentPage} of {totalPages}
+                        </span>
+                      </PaginationItem>
+                      <PaginationItem>
+                        <PaginationNext
+                          className={
+                            currentPage < totalPages
+                              ? "cursor-pointer"
+                              : "pointer-events-none opacity-50"
+                          }
+                          onClick={() => {
+                            if (currentPage < totalPages) {
+                              handlePageChange(currentPage + 1);
+                              window.scrollTo({ top: 0, behavior: "smooth" });
+                            }
+                          }}
+                          isActive={currentPage < totalPages}
+                        />
+                      </PaginationItem>
                     </PaginationContent>
                   </Pagination>
                 </div>
               ) : (
-                <div className="text-sm flex justify-center mt-2">No features found.</div>
+                <div className="text-sm text-center mt-4 space-y-2">
+                  {searchResults.length === 0 ? (
+                    <p>No SAE features activated on this sequence.</p>
+                  ) : (
+                    <>
+                      <p>No features match your current filters.</p>
+                      <Button variant="link" onClick={clearFilters} className="text-sm">
+                        Clear all filters
+                      </Button>
+                    </>
+                  )}
+                </div>
               )}
             </>
           )}
