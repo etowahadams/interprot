@@ -36,7 +36,6 @@ const CustomStructureViewer = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [warning, setWarning] = useState("");
-  const [hoverLabel, setHoverLabel] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
   // Bidirectional hover tracking
@@ -52,8 +51,8 @@ const CustomStructureViewer = ({
   // Assume there is only one chain for a user inputted protein
   const { sequence, activations } = proteinActivationsData.chains[0];
 
-  // Combined active residue index (sequence hover takes priority)
-  const activeResidueIndex = sequenceHoverIndex ?? structureHoverIndex;
+  // Combined active residue index (structure hover takes priority)
+  const activeResidueIndex = structureHoverIndex ?? sequenceHoverIndex;
 
   // Calculate max activation for color scaling
   const maxActivation = useMemo(() => {
@@ -199,7 +198,6 @@ const CustomStructureViewer = ({
       plugin.managers.interactivity.setProps({ granularity: "residue" });
       plugin.behaviors.labels.highlight.subscribe(({ labels }) => {
         const label = labels.length > 0 ? parseMolstarLabel(String(labels[0])) : null;
-        setHoverLabel(label);
 
         // Parse residue info for bidirectional hover
         const residueIndex = parseResidueIndexFromLabel(label);
@@ -338,13 +336,7 @@ const CustomStructureViewer = ({
               width: "100%",
               height: isMobile ? 300 : 400,
             }}
-          >
-            {hoverLabel && (
-              <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-sm pointer-events-none z-20">
-                {hoverLabel}
-              </div>
-            )}
-          </div>
+          ></div>
           <small>Structure generated with ESMFold</small>
         </>
       )}
@@ -359,7 +351,7 @@ const CustomStructureViewer = ({
           activations={activations}
           maxActivation={maxActivation}
           activeResidueIndex={activeResidueIndex}
-          hoverIndex={sequenceHoverIndex}
+          infoIndex={activeResidueIndex}
           onHoverIndexChange={setSequenceHoverIndex}
           structurePositions={structurePositions ?? undefined}
         />

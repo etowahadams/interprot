@@ -5,7 +5,7 @@ interface SequenceActivationViewerProps {
   activations: number[];
   maxActivation: number;
   activeResidueIndex: number | null;
-  hoverIndex: number | null;
+  infoIndex: number | null;
   onHoverIndexChange: (index: number | null) => void;
   structurePositions?: Set<number>;
 }
@@ -15,7 +15,7 @@ const SequenceActivationViewer = ({
   activations,
   maxActivation,
   activeResidueIndex,
-  hoverIndex,
+  infoIndex,
   onHoverIndexChange,
   structurePositions,
 }: SequenceActivationViewerProps) => {
@@ -23,23 +23,23 @@ const SequenceActivationViewer = ({
     <div className="rounded-lg border bg-white p-3">
       {/* Fixed info bar - updates on hover */}
       <div className="text-xs text-gray-600 mb-2 h-5 flex items-center gap-3 border-b pb-2">
-        {hoverIndex !== null ? (
+        {infoIndex !== null ? (
           <>
             <span>
               <span className="text-gray-400">Position:</span>{" "}
-              <span className="font-medium text-gray-900">{hoverIndex + 1}</span>
+              <span className="font-medium text-gray-900">{infoIndex + 1}</span>
             </span>
             <span>
               <span className="text-gray-400">Residue:</span>{" "}
-              <span className="font-medium text-gray-900">{sequence[hoverIndex]}</span>
+              <span className="font-medium text-gray-900">{sequence[infoIndex]}</span>
             </span>
             <span>
               <span className="text-gray-400">SAE Activation:</span>{" "}
               <span className="font-medium text-gray-900">
-                {(activations[hoverIndex] ?? 0).toFixed(2)}
+                {(activations[infoIndex] ?? 0).toFixed(2)}
               </span>
             </span>
-            {structurePositions && !structurePositions.has(hoverIndex) && (
+            {structurePositions && !structurePositions.has(infoIndex) && (
               <span className="text-gray-400 italic">(Not in structure)</span>
             )}
           </>

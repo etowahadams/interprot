@@ -157,6 +157,33 @@ function buildAuthSeqIdToSeqPosMap(model: Model): Map<string, Map<number, number
   return chainMaps;
 }
 
+/**
+ * Builds a map from (chainId, label_seq_id) -> seqPos for structure → sequence hover.
+ * label_seq_id is the canonical 1-based sequence position.
+ */
+function buildLabelSeqIdToSeqPosMap(model: Model): Map<string, Map<number, number>> {
+  const chainMaps = new Map<string, Map<number, number>>();
+  const { chains, residues, residueAtomSegments, chainAtomSegments } = model.atomicHierarchy;
+
+  for (let rI = 0, _rI = residues._rowCount; rI < _rI; rI++) {
+    const atomOffset = residueAtomSegments.offsets[rI];
+    const chainIdx = chainAtomSegments.index[atomOffset];
+    const chainId = chains.auth_asym_id.value(chainIdx);
+
+    const labelSeqId = residues.label_seq_id.value(rI);
+    if (!labelSeqId) continue;
+
+    const seqPos = labelSeqId - 1;
+
+    if (!chainMaps.has(chainId)) {
+      chainMaps.set(chainId, new Map());
+    }
+    chainMaps.get(chainId)!.set(labelSeqId, seqPos);
+  }
+
+  return chainMaps;
+}
+
 const PDBStructureViewer = ({
   viewerId,
   proteinActivationsData,
@@ -164,7 +191,6 @@ const PDBStructureViewer = ({
 }: PDBStructureViewerProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [hoverLabel, setHoverLabel] = useState<string | null>(null);
   const isMobile = useIsMobile();
 
   // Bidirectional hover tracking
@@ -181,6 +207,8 @@ const PDBStructureViewer = ({
   const seqPosToResidueRef = useRef<Map<string, Map<number, number>>>(new Map());
   // Map: chainId -> (auth_seq_id -> seqPos) for structure → sequence hover
   const authSeqIdToSeqPosRef = useRef<Map<string, Map<number, number>>>(new Map());
+  // Map: chainId -> (label_seq_id -> seqPos) for structure → sequence hover fallback
+  const labelSeqIdToSeqPosRef = useRef<Map<string, Map<number, number>>>(new Map());
 
   // Track which sequence positions have corresponding structure residues
   const [structurePositions, setStructurePositions] = useState<Map<string, Set<number>>>(new Map());
@@ -194,17 +222,50 @@ const PDBStructureViewer = ({
     // Parse format like "ALA 42" or "ALA 42 (Chain a)"
     const match = label.match(/([A-Z]{3})\s+(\d+)(?:\s*\(Chain\s+([A-Za-z0-9]+)\))?/i);
     if (!match) return null;
-    const authSeqId = Number(match[2]);
-    const chainId = match[3] || selectedChainId || "";
-    if (Number.isNaN(authSeqId)) return null;
+    const residueNumber = Number(match[2]);
+    const chainId = match[3] || selectedChainId || groupedChains[0]?.ids[0] || "";
+    if (Number.isNaN(residueNumber)) return null;
 
-    // Look up the sequence position using auth_seq_id
-    const chainMap = authSeqIdToSeqPosRef.current.get(chainId);
-    if (!chainMap) return null;
-    const seqPos = chainMap.get(authSeqId);
-    if (seqPos === undefined) return null;
+    const normalizeChainId = (value: string) => {
+      if (!value) return value;
+      if (authSeqIdToSeqPosRef.current.has(value)) return value;
+      if (labelSeqIdToSeqPosRef.current.has(value)) return value;
+      const lower = value.toLowerCase();
+      for (const key of authSeqIdToSeqPosRef.current.keys()) {
+        if (key.toLowerCase() === lower) return key;
+      }
+      for (const key of labelSeqIdToSeqPosRef.current.keys()) {
+        if (key.toLowerCase() === lower) return key;
+      }
+      return value;
+    };
 
-    return { seqPos, chainId };
+    const findSeqPos = (
+      maps: Map<string, Map<number, number>>,
+      preferredChainId: string
+    ): { seqPos: number; chainId: string } | null => {
+      if (preferredChainId) {
+        const preferredMap = maps.get(preferredChainId);
+        const preferredSeqPos = preferredMap?.get(residueNumber);
+        if (preferredSeqPos !== undefined) {
+          return { seqPos: preferredSeqPos, chainId: preferredChainId };
+        }
+      }
+      for (const [mapChainId, map] of maps.entries()) {
+        const seqPos = map.get(residueNumber);
+        if (seqPos !== undefined) {
+          return { seqPos, chainId: mapChainId };
+        }
+      }
+      return null;
+    };
+
+    const resolvedChainId = normalizeChainId(chainId);
+    let result = findSeqPos(authSeqIdToSeqPosRef.current, resolvedChainId);
+    if (!result) {
+      result = findSeqPos(labelSeqIdToSeqPosRef.current, resolvedChainId);
+    }
+    return result;
   };
 
   // Get Molstar loci for highlighting a specific residue
@@ -259,8 +320,8 @@ const PDBStructureViewer = ({
     return Math.max(...proteinActivationsData.chains.flatMap((chain) => chain.activations), 0);
   }, [proteinActivationsData.chains]);
 
-  // Combined active residue index (sequence hover takes priority)
-  const activeResidueIndex = sequenceHoverIndex ?? structureHoverIndex;
+  // Combined active residue index (structure hover takes priority)
+  const activeResidueIndex = structureHoverIndex ?? sequenceHoverIndex;
 
   useEffect(() => {
     // Track if effect is still active (component mounted and not re-rendered)
@@ -318,7 +379,6 @@ const PDBStructureViewer = ({
       plugin.behaviors.labels.highlight.subscribe(({ labels }) => {
         const label =
           labels.length > 0 ? parseMolstarLabel(String(labels[0]), hasMultipleChains) : null;
-        setHoverLabel(label);
 
         const residueInfo = parseResidueInfoFromLabel(label);
         if (residueInfo) {
@@ -383,6 +443,7 @@ const PDBStructureViewer = ({
             const seqPosMap = buildSeqPosToResidueMap(model);
             seqPosToResidueRef.current = seqPosMap;
             authSeqIdToSeqPosRef.current = buildAuthSeqIdToSeqPosMap(model);
+            labelSeqIdToSeqPosRef.current = buildLabelSeqIdToSeqPosMap(model);
 
             // Build set of positions that exist in structure for each chain
             const positionsMap = new Map<string, Set<number>>();
@@ -486,11 +547,6 @@ const PDBStructureViewer = ({
               <img src={proteinEmoji} alt="Loading..." className="w-12 h-12 animate-wiggle" />
             </div>
           )}
-          {hoverLabel && (
-            <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-sm pointer-events-none z-20">
-              {hoverLabel}
-            </div>
-          )}
         </div>
       )}
 
@@ -522,7 +578,7 @@ const PDBStructureViewer = ({
             activations={currentChainGroup.items[0].activations}
             maxActivation={maxActivation}
             activeResidueIndex={activeResidueIndex}
-            hoverIndex={sequenceHoverIndex}
+            infoIndex={activeResidueIndex}
             onHoverIndexChange={setSequenceHoverIndex}
             structurePositions={structurePositions.get(selectedChainId || "")}
           />
