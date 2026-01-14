@@ -1,24 +1,18 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { PluginContext } from "molstar/lib/mol-plugin/context";
-import { CustomElementProperty } from "molstar/lib/mol-model-props/common/custom-element-property";
-import {
-  Model,
-  ElementIndex,
-  Structure,
-  StructureElement,
-  Unit,
-} from "molstar/lib/mol-model/structure";
-import { OrderedSet } from "molstar/lib/mol-data/int";
-import { Color } from "molstar/lib/mol-util/color";
+import { Structure, StructureElement } from "molstar/lib/mol-model/structure";
 import proteinEmoji from "../protein.png";
 import { useIsMobile } from "@/hooks/use-mobile";
 import {
   AminoAcidSequence,
   ProteinActivationsData,
   StructureCache,
-  redColorMapRGB,
   createMolstarSpec,
   parseMolstarLabel,
+  createResidueColorTheme,
+  parseResidueIndexFromLabel,
+  buildResidueIndexMap,
+  getResidueLoci,
 } from "@/utils";
 import SequenceActivationViewer from "@/components/SequenceActivationViewer";
 
@@ -58,82 +52,6 @@ const CustomStructureViewer = ({
   const maxActivation = useMemo(() => {
     return Math.max(...activations, 0);
   }, [activations]);
-
-  // Parse residue index from Molstar hover label
-  const parseResidueIndexFromLabel = (label: string | null): number | null => {
-    if (!label) return null;
-    const match = label.match(/([A-Z]{3})\s+(\d+)/i);
-    if (!match) return null;
-    const residueNumber = Number(match[2]);
-    return Number.isNaN(residueNumber) ? null : residueNumber - 1;
-  };
-
-  // Build residue index map: seqId -> residueIndex
-  const buildResidueIndexMap = (structure: Structure): Map<number, number> => {
-    const map = new Map<number, number>();
-    const model = structure.models[0];
-    if (!model) return map;
-
-    const residues = model.atomicHierarchy.residues;
-    const labelSeqId = residues.label_seq_id;
-    const authSeqId = residues.auth_seq_id;
-    for (let i = 0, _i = residues._rowCount; i < _i; i++) {
-      const seqId = labelSeqId.value(i) || authSeqId.value(i);
-      if (seqId && !map.has(seqId)) {
-        map.set(seqId, i);
-      }
-    }
-    return map;
-  };
-
-  // Get Molstar loci for highlighting a specific residue
-  const getResidueLoci = (structure: Structure, residueIndex: number): StructureElement.Loci => {
-    const elements: StructureElement.Loci["elements"][number][] = [];
-
-    for (const unit of structure.units) {
-      if (!Unit.isAtomic(unit)) continue;
-
-      const indices: StructureElement.UnitIndex[] = [];
-      for (let i = 0, _i = unit.elements.length; i < _i; i++) {
-        if (unit.getResidueIndex(i as StructureElement.UnitIndex) === residueIndex) {
-          indices.push(i as StructureElement.UnitIndex);
-        }
-      }
-      if (indices.length > 0) {
-        elements.push({ unit, indices: OrderedSet.ofSortedArray(indices) });
-      }
-    }
-    return StructureElement.Loci(structure, elements);
-  };
-
-  const createResidueColorTheme = (activationList: number[], name = "residue-colors") => {
-    const maxValue = Math.max(...activationList);
-    return CustomElementProperty.create({
-      label: "Residue Colors",
-      name,
-      getData(model: Model) {
-        const map = new Map<ElementIndex, number>();
-        const residueIndex = model.atomicHierarchy.residueAtomSegments.index;
-        for (let i = 0, _i = model.atomicHierarchy.atoms._rowCount; i < _i; i++) {
-          map.set(i as ElementIndex, residueIndex[i]);
-        }
-        return { value: map };
-      },
-      coloring: {
-        getColor(e) {
-          const color =
-            maxValue > 0 ? redColorMapRGB(activationList[e], maxValue) : [255, 255, 255];
-          return activationList[e] !== undefined
-            ? Color.fromRgb(color[0], color[1], color[2])
-            : Color.fromRgb(255, 255, 255);
-        },
-        defaultColor: Color(0x777777),
-      },
-      getLabel() {
-        return "Activation colors";
-      },
-    });
-  };
 
   useEffect(() => {
     const getStructure = async (sequence: AminoAcidSequence) => {

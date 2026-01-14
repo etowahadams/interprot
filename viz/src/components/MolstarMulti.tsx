@@ -1,19 +1,18 @@
 import React, { useEffect, useRef, useState, memo } from "react";
 import { PluginContext } from "molstar/lib/mol-plugin/context";
-import { CustomElementProperty } from "molstar/lib/mol-model-props/common/custom-element-property";
-import {
-  Model,
-  ElementIndex,
-  Structure,
-  StructureElement,
-  Unit,
-} from "molstar/lib/mol-model/structure";
-import { OrderedSet } from "molstar/lib/mol-data/int";
-import { Color } from "molstar/lib/mol-util/color";
+import { Structure, StructureElement } from "molstar/lib/mol-model/structure";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Search, X } from "lucide-react";
 import proteinEmoji from "../protein.png";
-import { redColorMapRGB, redColorMapHex, createMolstarSpec, parseMolstarLabel } from "@/utils.ts";
+import {
+  redColorMapHex,
+  createMolstarSpec,
+  parseMolstarLabel,
+  createResidueColorTheme,
+  parseResidueIndexFromLabel,
+  buildResidueIndexMap,
+  getResidueLoci,
+} from "@/utils.ts";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { SeqWithSAEActs } from "./SeqsViewer";
 import { useSearchParams } from "react-router-dom";
@@ -54,77 +53,6 @@ const MolstarMulti: React.FC<MolstarViewerProps> = memo(function MolstarMulti({
   const sequenceContainerRef = useRef<HTMLDivElement | null>(null);
   const offscreenContainerRef = useRef<HTMLDivElement>(null);
   const viewerContainerRefs = useRef<(HTMLDivElement | null)[]>([]);
-
-  const createResidueColorTheme = (activationList: number[], name = "residue-colors") => {
-    const maxValue = Math.max(...activationList);
-    return CustomElementProperty.create({
-      label: "Residue Colors",
-      name,
-      getData(model: Model) {
-        const map = new Map<ElementIndex, number>();
-        const residueIndex = model.atomicHierarchy.residueAtomSegments.index;
-        for (let i = 0, _i = model.atomicHierarchy.atoms._rowCount; i < _i; i++) {
-          map.set(i as ElementIndex, residueIndex[i]);
-        }
-        return { value: map };
-      },
-      coloring: {
-        getColor(e) {
-          const color =
-            maxValue > 0 ? redColorMapRGB(activationList[e], maxValue) : [255, 255, 255];
-          return activationList[e] !== undefined
-            ? Color.fromRgb(color[0], color[1], color[2])
-            : Color.fromRgb(255, 255, 255);
-        },
-        defaultColor: Color(0x777777),
-      },
-      getLabel() {
-        return "Activation colors";
-      },
-    });
-  };
-
-  const parseResidueIndexFromLabel = (label: string | null) => {
-    if (!label) return null;
-    const match = label.match(/(\d+)/);
-    if (!match) return null;
-    const residueNumber = Number(match[1]);
-    return Number.isNaN(residueNumber) ? null : residueNumber - 1;
-  };
-
-  const buildResidueIndexMap = (structure: Structure) => {
-    const map = new Map<number, number>();
-    const model = structure.models[0];
-    if (!model) return map;
-
-    const residues = model.atomicHierarchy.residues;
-    const labelSeqId = residues.label_seq_id;
-    const authSeqId = residues.auth_seq_id;
-    for (let i = 0, _i = residues._rowCount; i < _i; i++) {
-      const seqId = labelSeqId.value(i) || authSeqId.value(i);
-      if (seqId && !map.has(seqId)) {
-        map.set(seqId, i);
-      }
-    }
-    return map;
-  };
-
-  const getResidueLoci = (structure: Structure, residueIndex: number) => {
-    const elements: StructureElement.Loci["elements"][number][] = [];
-    for (const unit of structure.units) {
-      if (!Unit.isAtomic(unit)) continue;
-      const indices: StructureElement.UnitIndex[] = [];
-      for (let i = 0, _i = unit.elements.length; i < _i; i++) {
-        if (unit.getResidueIndex(i as StructureElement.UnitIndex) === residueIndex) {
-          indices.push(i as StructureElement.UnitIndex);
-        }
-      }
-      if (indices.length > 0) {
-        elements.push({ unit, indices: OrderedSet.ofSortedArray(indices) });
-      }
-    }
-    return StructureElement.Loci(structure, elements);
-  };
 
   const initViewer = async (
     element: HTMLDivElement,
