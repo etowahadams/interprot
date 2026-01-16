@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { getSAEAllDimsActivations } from "@/runpod.ts";
+import { getSAEAllDimsActivations } from "@/modal.ts";
 import SeqInput, { ValidSeqInput } from "./SeqInput";
 import { Input } from "@/components/ui/input";
 import {

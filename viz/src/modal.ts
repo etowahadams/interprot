@@ -1,8 +1,7 @@
-// Modal SAE Inference API
-// Note: File kept as runpod.ts to minimize import changes - consider renaming to modal.ts
+// Modal SAE API
 
 const MODAL_INFERENCE_ENDPOINT = "https://liambai--sae-inference-saeinference-inference.modal.run";
-const STEERING_ENDPOINT_ID = "8ee0uonshst9k2"; // Still on RunPod
+const MODAL_STEERING_ENDPOINT = "https://liambai--sae-steering-saesteering-steering.modal.run";
 
 type SAEDimActivationsInput = {
   sae_name: string;
@@ -22,9 +21,12 @@ type SteeringInput = {
   multiplier: number;
 };
 
-async function postModal(input: SAEDimActivationsInput | SAEAllDimsActivationsInput) {
+async function postModal(
+  endpoint: string,
+  input: SAEDimActivationsInput | SAEAllDimsActivationsInput | SteeringInput
+) {
   try {
-    const response = await fetch(MODAL_INFERENCE_ENDPOINT, {
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -42,36 +44,6 @@ async function postModal(input: SAEDimActivationsInput | SAEAllDimsActivationsIn
     }
 
     return resp.data;
-  } catch (error) {
-    console.error("Error fetching data:", error);
-    throw error;
-  }
-}
-
-// Keep RunPod for steering endpoint (not yet migrated)
-async function postRunpod(input: SteeringInput, endpointId: string) {
-  try {
-    const response = await fetch(`https://api.runpod.ai/v2/${endpointId}/runsync`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${import.meta.env.VITE_RUNPOD_API_KEY}`,
-      },
-      body: JSON.stringify({
-        input: input,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Network error! Status: ${response.status}`);
-    }
-
-    const resp = await response.json();
-    if (!resp.output?.data) {
-      throw new Error("Invalid response format from RunPod API");
-    }
-
-    return resp.output.data;
   } catch (error) {
     console.error("Error fetching data:", error);
     throw error;
@@ -102,7 +74,7 @@ export async function getSAEDimActivations(input: SAEDimActivationsInput): Promi
   }
 
   // Both caches have missed, call Modal API
-  const data = await postModal(input);
+  const data = await postModal(MODAL_INFERENCE_ENDPOINT, input);
   SAEDimActivationsCache[dimCacheKey] = data.tokens_acts_list;
   return data.tokens_acts_list;
 }
@@ -114,13 +86,12 @@ export async function getSAEAllDimsActivations(
   if (cacheKey in SAEAllDimsActivationsCache) {
     return SAEAllDimsActivationsCache[cacheKey];
   }
-  const data = await postModal(input);
+  const data = await postModal(MODAL_INFERENCE_ENDPOINT, input);
   SAEAllDimsActivationsCache[cacheKey] = data.token_acts_list_by_active_dim;
   return data.token_acts_list_by_active_dim;
 }
 
-// Steering still uses RunPod (not yet migrated to Modal)
 export async function getSteeredSequence(input: SteeringInput): Promise<string> {
-  const data = await postRunpod(input, STEERING_ENDPOINT_ID);
+  const data = await postModal(MODAL_STEERING_ENDPOINT, input);
   return data.steered_sequence;
 }

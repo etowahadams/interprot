@@ -10,13 +10,10 @@ import {
   constructProteinActivationsDataFromPDBID,
 } from "@/utils.ts";
 import CustomStructureViewer from "./CustomStructureViewer";
-import { getSAEDimActivations, getSteeredSequence } from "@/runpod.ts";
+import { getSAEDimActivations, getSteeredSequence } from "@/modal.ts";
 import SeqInput, { ValidSeqInput } from "./SeqInput";
 import useUrlState from "@/hooks/useUrlState";
-import FullSeqsViewer from "./FullSeqsViewer";
 import PDBStructureViewer from "./PDBStructureViewer";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-// Note: FullSeqsViewer is still used for the steered protein section
 import { SAEContext } from "@/SAEContext";
 
 enum PlaygroundState {
@@ -256,25 +253,6 @@ const CustomSeqPlayground = () => {
 
               {steeredActivations.length > 0 && (
                 <>
-                  <Card className="my-4">
-                    <CardHeader>
-                      <CardTitle>SAE activations on steered protein</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <FullSeqsViewer
-                        proteinActivationsData={{
-                          chains: [
-                            {
-                              id: "Unknown",
-                              sequence: steeredSeq as AminoAcidSequence,
-                              activations: steeredActivations,
-                            },
-                          ],
-                        }}
-                      />
-                    </CardContent>
-                  </Card>
-
                   <CustomStructureViewer
                     viewerId="steered-viewer"
                     proteinActivationsData={{

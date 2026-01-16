@@ -1,4 +1,4 @@
-import { getSAEDimActivations } from "./runpod";
+import { getSAEDimActivations } from "./modal";
 import { DefaultPluginSpec } from "molstar/lib/mol-plugin/spec";
 import { CustomElementProperty } from "molstar/lib/mol-model-props/common/custom-element-property";
 import {
